@@ -594,7 +594,8 @@ export const INITIAL_STUDENT_RECORDS = [
     emergencyPhone: '(555) 321-9844',
     tuitionBalance: 4000,
     medicalNotes: 'Mild asthma (inhaler on file at infirmary). No dietary allergies.',
-    enrolledCourses: ['PHYS-401', 'MATH-450', 'ENG-320', 'HIST-305', 'MUS-210', 'SPAN-302']
+    enrolledCourses: ['PHYS-401', 'MATH-450', 'ENG-320', 'HIST-305', 'MUS-210', 'SPAN-302'],
+    idCardMockupUrl: '/src/assets/images/student_id_liam_1792630513061.jpg'
   },
   {
     id: 'stu-102',
@@ -612,7 +613,8 @@ export const INITIAL_STUDENT_RECORDS = [
     emergencyPhone: '(555) 489-1120',
     tuitionBalance: 0,
     medicalNotes: 'EpiPen for severe peanut/tree nut allergy.',
-    enrolledCourses: ['PHYS-401', 'ENG-320', 'HIST-305', 'SPAN-302']
+    enrolledCourses: ['PHYS-401', 'ENG-320', 'HIST-305', 'SPAN-302'],
+    idCardMockupUrl: '/src/assets/images/student_id_cordelia_1792630515573.jpg'
   },
   {
     id: 'stu-103',
@@ -630,7 +632,8 @@ export const INITIAL_STUDENT_RECORDS = [
     emergencyPhone: '(555) 884-9021',
     tuitionBalance: 1200,
     medicalNotes: 'No known health restrictions or allergies.',
-    enrolledCourses: ['PHYS-401', 'MATH-450', 'HIST-305']
+    enrolledCourses: ['PHYS-401', 'MATH-450', 'HIST-305'],
+    idCardMockupUrl: '/src/assets/images/student_id_badge_card_1792630517398.jpg'
   },
   {
     id: 'stu-104',
@@ -648,7 +651,8 @@ export const INITIAL_STUDENT_RECORDS = [
     emergencyPhone: '(555) 902-3314',
     tuitionBalance: 0,
     medicalNotes: 'Clear medical history.',
-    enrolledCourses: ['PHYS-401', 'MATH-450', 'ENG-320']
+    enrolledCourses: ['PHYS-401', 'MATH-450', 'ENG-320'],
+    idCardMockupUrl: '/src/assets/images/student_id_sophia_1792630517080.jpg'
   },
   {
     id: 'stu-105',

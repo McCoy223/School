@@ -164,6 +164,7 @@ export interface StudentRecord {
   tuitionBalance: number;
   medicalNotes: string;
   enrolledCourses: string[];
+  idCardMockupUrl?: string;
 }
 
 export interface StaffRecord {

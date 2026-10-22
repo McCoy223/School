@@ -21,9 +21,12 @@ import {
   Layers,
   ChevronRight,
   ShieldCheck,
-  UserCheck
+  UserCheck,
+  CreditCard,
+  Sparkles
 } from 'lucide-react';
 import { StudentRecord, Course, Assignment, TeacherResultUploadBatch } from '../types';
+import { StudentIDCardModal } from './StudentIDCardModal';
 
 interface StudentClassPageProps {
   students: StudentRecord[];
@@ -56,6 +59,7 @@ export const StudentClassPage: React.FC<StudentClassPageProps> = ({
   const [gradeFilter, setGradeFilter] = useState<string>('All');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [selectedStudentForDossier, setSelectedStudentForDossier] = useState<StudentRecord | null>(null);
+  const [selectedStudentForIDCard, setSelectedStudentForIDCard] = useState<StudentRecord | null>(null);
 
   // Student Enrollment Modal
   const [isEnrollModalOpen, setIsEnrollModalOpen] = useState(false);
@@ -453,6 +457,13 @@ export const StudentClassPage: React.FC<StudentClassPageProps> = ({
                         </td>
                         <td className="py-3.5 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => setSelectedStudentForIDCard(student)}
+                              className="p-1.5 text-amber-800 hover:text-amber-950 hover:bg-amber-100 rounded transition-colors cursor-pointer"
+                              title="Generate / View Student ID Card Mockup"
+                            >
+                              <CreditCard className="w-4 h-4" />
+                            </button>
                             <button
                               onClick={() => setSelectedStudentForDossier(student)}
                               className="p-1.5 text-stone-600 hover:text-stone-900 hover:bg-stone-100 rounded transition-colors cursor-pointer"
@@ -867,9 +878,47 @@ export const StudentClassPage: React.FC<StudentClassPageProps> = ({
                   {selectedStudentForDossier.medicalNotes || 'No restrictions reported.'}
                 </p>
               </div>
+
+              {/* Student ID Card Badge Preview Banner */}
+              <div className="bg-stone-900 text-white p-4 rounded-xl border border-stone-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-amber-200 text-stone-950 flex items-center justify-center font-bold shrink-0">
+                    <CreditCard className="w-5 h-5 text-stone-950" />
+                  </div>
+                  <div>
+                    <div className="text-[10px] uppercase font-mono tracking-wider text-amber-300 font-semibold">
+                      Official Academy Smart ID Credential
+                    </div>
+                    <div className="text-xs font-semibold text-white mt-0.5">
+                      Photorealistic 3D Smart Card Mockup Generated
+                    </div>
+                    <div className="text-[10px] text-stone-400">
+                      RFID / Barcode: {selectedStudentForDossier.studentId} · Valid 2026–2027
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedStudentForIDCard(selectedStudentForDossier)}
+                  className="px-3.5 py-2 text-xs font-semibold text-stone-950 bg-amber-200 hover:bg-amber-100 rounded-lg shadow-xs transition-colors flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-stone-950" />
+                  <span>View / Generate ID Card</span>
+                </button>
+              </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-stone-200">
+            <div className="flex items-center justify-between gap-3 pt-4 border-t border-stone-200">
+              <button
+                type="button"
+                onClick={() => setSelectedStudentForIDCard(selectedStudentForDossier)}
+                className="px-3.5 py-2 text-xs font-semibold text-stone-950 bg-amber-200 hover:bg-amber-100 rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer font-sans"
+              >
+                <CreditCard className="w-4 h-4 text-stone-950" />
+                <span>Open ID Card Mockup</span>
+              </button>
+
               <button
                 onClick={() => setSelectedStudentForDossier(null)}
                 className="px-4 py-2 text-xs font-semibold text-stone-700 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-lg cursor-pointer transition-colors"
@@ -1221,6 +1270,15 @@ export const StudentClassPage: React.FC<StudentClassPageProps> = ({
             </form>
           </div>
         </div>
+      )}
+
+      {/* ===================== MODAL 4: STUDENT ID CARD CREDENTIAL MOCKUP ===================== */}
+      {selectedStudentForIDCard && (
+        <StudentIDCardModal
+          isOpen={!!selectedStudentForIDCard}
+          onClose={() => setSelectedStudentForIDCard(null)}
+          student={selectedStudentForIDCard}
+        />
       )}
     </div>
   );
