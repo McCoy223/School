@@ -2,6 +2,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import { ClerkRootProvider } from './components/ClerkIntegration';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -79,7 +80,10 @@ const rootEl = document.getElementById('root');
 if (rootEl) {
   createRoot(rootEl).render(
     <RootErrorBoundary>
-      <App />
+      <ClerkRootProvider>
+        <App />
+      </ClerkRootProvider>
     </RootErrorBoundary>
   );
 }
+

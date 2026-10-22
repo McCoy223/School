@@ -9,7 +9,8 @@ import {
   Server,
   BookOpen
 } from 'lucide-react';
-import { AppPage } from '../types';
+import { AuthUserSession, AppPage } from '../types';
+import { LogOut, UserCheck } from 'lucide-react';
 
 interface NavbarProps {
   activePage: AppPage;
@@ -18,6 +19,8 @@ interface NavbarProps {
   onOpenAnnouncements: () => void;
   unreadAnnouncementsCount: number;
   schoolName?: string;
+  currentUser?: AuthUserSession | null;
+  onLogout?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -26,7 +29,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenSearch,
   onOpenAnnouncements,
   unreadAnnouncementsCount,
-  schoolName = "St. Andrew's Academy"
+  schoolName = "St. Andrew's Academy",
+  currentUser,
+  onLogout
 }) => {
   const navItems: { id: AppPage; label: string; icon: React.FC<{ className?: string }> }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -114,6 +119,33 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Server className="w-3.5 h-3.5" />
               <span>SMS Console</span>
             </button>
+
+            {/* Authenticated User Status & Logout */}
+            {currentUser && (
+              <div className="flex items-center gap-2 pl-2 border-l border-stone-200">
+                <div className="hidden md:flex flex-col text-right">
+                  <span className="text-xs font-bold text-stone-900 leading-tight truncate max-w-[120px]">
+                    {currentUser.name}
+                  </span>
+                  <span className="text-[10px] text-amber-800 font-semibold uppercase tracking-wider">
+                    {currentUser.role}
+                  </span>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-stone-900 text-amber-200 flex items-center justify-center font-serif font-bold text-xs ring-1 ring-stone-300 shrink-0">
+                  {currentUser.name.charAt(0).toUpperCase()}
+                </div>
+                {onLogout && (
+                  <button
+                    onClick={onLogout}
+                    className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                    title="Sign Out / Switch Terminal User"
+                    aria-label="Sign Out"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -1,5 +1,18 @@
-export type UserRole = 'student' | 'parent' | 'faculty';
+export type UserRole = 'student' | 'parent' | 'faculty' | 'admin' | 'registrar';
 export type AppPage = 'dashboard' | 'admin' | 'sms' | 'students' | 'teachers';
+
+export interface AuthUserSession {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'faculty' | 'student' | 'parent' | 'registrar';
+  roleTitle: string;
+  avatarColor?: string;
+  avatarUrl?: string;
+  clerkUserId?: string;
+  rememberDevice: boolean;
+  loggedInAt: string;
+}
 
 export interface FacultyMember {
   id: string;
@@ -278,5 +291,67 @@ export interface TeacherResultUploadBatch {
   status: 'Published' | 'Pending Review';
   records: ClassStudentResult[];
 }
+
+export type AuditActionType =
+  | 'AUTH_LOGIN'
+  | 'AUTH_LOGOUT'
+  | 'AUTH_SESSION_REFRESH'
+  | 'SETTINGS_UPDATE'
+  | 'SETTINGS_RESET'
+  | 'PAGE_PUBLISHED'
+  | 'ANNOUNCEMENT_CREATED'
+  | 'ANNOUNCEMENT_UPDATED'
+  | 'ANNOUNCEMENT_DELETED'
+  | 'EVENT_CREATED'
+  | 'EVENT_UPDATED'
+  | 'EVENT_DELETED'
+  | 'FACULTY_CREATED'
+  | 'FACULTY_UPDATED'
+  | 'FACULTY_DELETED'
+  | 'STUDENT_ENROLLED'
+  | 'STUDENT_UPDATED'
+  | 'STUDENT_DELETED'
+  | 'STUDENT_ID_GENERATED'
+  | 'RESULTS_UPLOADED'
+  | 'GRADE_UPDATED'
+  | 'INVOICE_CREATED'
+  | 'INVOICE_PAID'
+  | 'INQUIRY_STATUS_CHANGED'
+  | 'MEDIA_UPLOADED'
+  | 'OFFLINE_QUEUE_SYNCED'
+  | 'LEDGER_EXPORTED';
+
+export type AuditSeverity = 'info' | 'warning' | 'critical' | 'security';
+
+export interface AuditLogEntry {
+  id: string;
+  timestamp: string; // ISO-8601
+  actorId: string; // Clerk User ID (e.g. user_2...)
+  actorName: string; // Clerk Full Name or email
+  actorEmail?: string;
+  actorAvatar?: string;
+  action: AuditActionType;
+  actionLabel: string;
+  resource: string;
+  resourceId?: string;
+  severity: AuditSeverity;
+  details: Record<string, any>;
+  ipAddress: string;
+  userAgent: string;
+  synced: boolean;
+  offlineBuffered: boolean;
+  syncedAt?: string;
+  previousHash: string;
+  hash: string;
+}
+
+export interface AuditLogFilter {
+  searchQuery: string;
+  actionType: string;
+  severity: string;
+  syncStatus: 'all' | 'synced' | 'offline';
+  dateRange: 'all' | 'today' | '7days' | '30days';
+}
+
 
 

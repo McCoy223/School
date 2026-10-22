@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   FileText,
@@ -42,7 +42,10 @@ import {
   GraduationCap,
   Building,
   Sliders,
-  Maximize2
+  Maximize2,
+  Wifi,
+  WifiOff,
+  Shield
 } from 'lucide-react';
 import {
   SiteSettings,
@@ -55,6 +58,9 @@ import {
   AcademicDivision
 } from '../types';
 import { IMAGES } from '../assets/images';
+import { AuditLogsViewer } from './AuditLogsViewer';
+import { auditLogger } from '../services/auditLogger';
+import { ClerkLiveAuthWidget, ClerkConfigModal } from './ClerkIntegration';
 
 interface AdminPortalProps {
   settings: SiteSettings;
@@ -89,7 +95,9 @@ type WpMenuSection =
   | 'media'
   | 'forms'
   | 'appearance'
-  | 'settings';
+  | 'settings'
+  | 'audit-logs';
+
 
 export const AdminPortal: React.FC<AdminPortalProps> = ({
   settings,
@@ -118,6 +126,17 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const [activeMenu, setActiveMenu] = useState<WpMenuSection>('dashboard');
   const [editorSubTab, setEditorSubTab] = useState<'hero' | 'divisions' | 'welcome' | 'stats' | 'ribbon' | 'footer'>('hero');
   const [settingsSubTab, setSettingsSubTab] = useState<'general' | 'contact' | 'academics'>('general');
+
+  // Audit Logs & Clerk State
+  const [auditUnsyncedCount, setAuditUnsyncedCount] = useState<number>(() => auditLogger.getUnsyncedCount());
+  const [isClerkModalOpen, setIsClerkModalOpen] = useState(false);
+
+  useEffect(() => {
+    const unsub = auditLogger.subscribe(() => {
+      setAuditUnsyncedCount(auditLogger.getUnsyncedCount());
+    });
+    return () => unsub();
+  }, []);
 
   // Working copy of settings for real-time live preview
   const [localSettings, setLocalSettings] = useState<SiteSettings>(settings);
@@ -193,11 +212,30 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   // Commit Settings Changes to Root
   const handleSaveSettings = () => {
     onUpdateSettings(localSettings);
+    auditLogger.log({
+      action: 'SETTINGS_UPDATE',
+      actionLabel: `Site Configuration Updated (${localSettings.schoolName})`,
+      resource: 'SiteSettings:Root',
+      severity: 'info',
+      details: {
+        schoolName: localSettings.schoolName,
+        termName: localSettings.termName,
+        themeAccent: localSettings.themeAccent,
+        foundedYear: localSettings.foundedYear
+      }
+    });
     triggerNotice('WordPress Settings successfully published & updated on live site!');
   };
 
   const handleSaveStats = () => {
     onUpdateQuickStats(localStats);
+    auditLogger.log({
+      action: 'SETTINGS_UPDATE',
+      actionLabel: 'Academy Key Performance Metrics Updated',
+      resource: 'QuickStats:Collection',
+      severity: 'info',
+      details: { count: localStats.length }
+    });
     triggerNotice('Academy Key Performance Metrics updated!');
   };
 
@@ -205,13 +243,21 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const handleSaveQuickDraft = (e: React.FormEvent) => {
     e.preventDefault();
     if (!quickDraftTitle) return;
-    onAddAnnouncement({
+    const draftPayload = {
       title: quickDraftTitle,
-      category: 'Student Life',
+      category: 'Student Life' as const,
       author: 'Admin (Quick Draft)',
       date: new Date().toISOString().split('T')[0],
       urgent: false,
       content: quickDraftContent || 'Draft announcement created from WordPress admin console.'
+    };
+    onAddAnnouncement(draftPayload);
+    auditLogger.log({
+      action: 'ANNOUNCEMENT_CREATED',
+      actionLabel: `Quick Draft Published: "${quickDraftTitle}"`,
+      resource: 'SchoolAnnouncement',
+      severity: 'info',
+      details: draftPayload
     });
     setQuickDraftTitle('');
     setQuickDraftContent('');
@@ -245,7 +291,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     e.preventDefault();
     if (!postTitle) return;
     if (editingPost) {
-      onUpdateAnnouncement({
+      const updatedPost = {
         ...editingPost,
         title: postTitle,
         category: postCategory,
@@ -253,16 +299,33 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
         date: postDate,
         urgent: postUrgent,
         content: postContent
+      };
+      onUpdateAnnouncement(updatedPost);
+      auditLogger.log({
+        action: 'ANNOUNCEMENT_UPDATED',
+        actionLabel: `Announcement Post Modified: "${postTitle}"`,
+        resource: `SchoolAnnouncement:${editingPost.id}`,
+        resourceId: editingPost.id,
+        severity: 'info',
+        details: { title: postTitle, category: postCategory, urgent: postUrgent }
       });
       triggerNotice(`Post "${postTitle}" updated successfully.`);
     } else {
-      onAddAnnouncement({
+      const newPost = {
         title: postTitle,
         category: postCategory,
         author: postAuthor,
         date: postDate,
         urgent: postUrgent,
         content: postContent
+      };
+      onAddAnnouncement(newPost);
+      auditLogger.log({
+        action: 'ANNOUNCEMENT_CREATED',
+        actionLabel: `New Announcement Post Published: "${postTitle}"`,
+        resource: 'SchoolAnnouncement',
+        severity: 'info',
+        details: newPost
       });
       triggerNotice(`Post "${postTitle}" published live.`);
     }
@@ -367,22 +430,31 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           </div>
         </div>
 
-        {/* Right cluster: Live Customizer & User */}
-        <div className="flex items-center gap-3">
+        {/* Right cluster: Live Customizer & Clerk Live Authentication */}
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          {/* Offline buffer indicator if any buffered logs exist */}
+          {auditUnsyncedCount > 0 && (
+            <button
+              onClick={() => setActiveMenu('audit-logs')}
+              className="flex items-center gap-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded text-[10px] font-semibold cursor-pointer animate-pulse"
+              title={`${auditUnsyncedCount} audit records buffered in local offline queue`}
+            >
+              <WifiOff className="w-3 h-3 text-amber-400" />
+              <span>{auditUnsyncedCount} Queued</span>
+            </button>
+          )}
+
           <button
             onClick={() => setIsLiveCustomizerOpen(true)}
-            className="flex items-center gap-1.5 bg-[#2271b1] hover:bg-[#135e96] text-white px-2.5 py-1 rounded text-[11px] font-semibold transition-colors cursor-pointer shadow-xs"
+            className="hidden sm:flex items-center gap-1.5 bg-[#2271b1] hover:bg-[#135e96] text-white px-2.5 py-1 rounded text-[11px] font-semibold transition-colors cursor-pointer shadow-xs"
           >
             <Eye className="w-3.5 h-3.5" />
-            <span>Live Customizer</span>
+            <span>Customizer</span>
           </button>
 
-          <div className="flex items-center gap-2 text-stone-300">
-            <span className="hidden md:inline text-[11px]">Howdy,</span>
-            <span className="font-semibold text-white text-[11px]">Administrator</span>
-            <div className="w-6 h-6 rounded-full bg-amber-700 text-white flex items-center justify-center font-bold text-xs ring-1 ring-stone-600">
-              A
-            </div>
+          {/* Real Clerk Live Authentication Status */}
+          <div className="border-l border-[#2c3338] pl-2 sm:pl-3">
+            <ClerkLiveAuthWidget onOpenKeyModal={() => setIsClerkModalOpen(true)} />
           </div>
         </div>
       </header>
@@ -567,6 +639,34 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                   <span>Site Settings</span>
                 </div>
               </button>
+
+              <div className="pt-3 pb-1 px-4 text-[10px] uppercase font-bold tracking-wider text-stone-500">
+                Security & Compliance
+              </div>
+
+              {/* Audit Logs (Clerk & Offline Buffer) */}
+              <button
+                onClick={() => setActiveMenu('audit-logs')}
+                className={`w-full flex items-center justify-between px-4 py-2.5 transition-colors cursor-pointer text-left ${
+                  activeMenu === 'audit-logs'
+                    ? 'bg-[#2271b1] text-white font-semibold'
+                    : 'hover:bg-[#2c3338] hover:text-[#72aee6]'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  <span>Audit Logs (Clerk)</span>
+                </div>
+                {auditUnsyncedCount > 0 ? (
+                  <span className="text-[10px] bg-amber-500 text-stone-950 font-bold px-1.5 py-0.2 rounded-full font-mono animate-pulse">
+                    {auditUnsyncedCount} queued
+                  </span>
+                ) : (
+                  <span className="text-[10px] bg-emerald-950 text-emerald-300 px-1.5 py-0.5 rounded font-mono font-bold">
+                    Active
+                  </span>
+                )}
+              </button>
             </nav>
 
             {/* Quick Actions Footer inside Sidebar */}
@@ -692,10 +792,34 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                           <div className="text-stone-500 text-[11px]">Media Assets</div>
                         </div>
                       </div>
+                      <div
+                        onClick={() => setActiveMenu('audit-logs')}
+                        className="flex items-center gap-2.5 cursor-pointer hover:bg-stone-100/60 p-1 rounded transition-colors group"
+                        title="View security and compliance audit logs"
+                      >
+                        <ShieldCheck className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition-transform" />
+                        <div>
+                          <div className="font-bold text-base text-stone-900 tabular-nums flex items-center gap-1.5">
+                            <span>{auditLogger.getLogs().length}</span>
+                            {auditUnsyncedCount > 0 && (
+                              <span className="text-[9px] bg-amber-500 text-stone-950 font-bold px-1.5 py-0.2 rounded-full animate-pulse">
+                                {auditUnsyncedCount} queued
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-stone-500 text-[11px] group-hover:text-[#2271b1] font-medium">Audit Logs (Clerk)</div>
+                        </div>
+                      </div>
                     </div>
                     <div className="px-5 py-2.5 bg-stone-50 border-t border-[#e5e5e5] text-[11px] text-stone-500 flex items-center justify-between">
                       <span>WordPress 6.7 running St. Andrew's Theme</span>
-                      <span className="text-emerald-700 font-medium">Site Health: Excellent</span>
+                      <button
+                        onClick={() => setActiveMenu('audit-logs')}
+                        className="text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                      >
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        <span>Audit Ledger: {auditUnsyncedCount > 0 ? `${auditUnsyncedCount} Offline Queued` : 'Synced & Chained'}</span>
+                      </button>
                     </div>
                   </div>
 
@@ -1894,6 +2018,17 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
               </div>
             </div>
           )}
+
+          {/* ======================================================== */}
+          {/* TAB 10: AUDIT LOGS (CLERK AUTH & OFFLINE BUFFER)        */}
+          {/* ======================================================== */}
+          {activeMenu === 'audit-logs' && (
+            <div className="space-y-6">
+              <AuditLogsViewer
+                onRecordAuditNotification={msg => triggerNotice(msg)}
+              />
+            </div>
+          )}
         </main>
       </div>
 
@@ -2365,6 +2500,16 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           </div>
         </div>
       )}
+
+      {/* Clerk Publishable Key Configuration Modal */}
+      <ClerkConfigModal
+        isOpen={isClerkModalOpen}
+        onClose={() => setIsClerkModalOpen(false)}
+        onKeySaved={key => {
+          triggerNotice(key ? 'Clerk Authentication Activated.' : 'Clerk Key Removed.');
+        }}
+      />
     </div>
   );
 };
+

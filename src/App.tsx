@@ -13,6 +13,9 @@ import { AdminPortal } from './components/AdminPortal';
 import { Footer } from './components/Footer';
 import { SchoolAnnouncementsModal } from './components/SchoolAnnouncementsModal';
 import { GlobalSearchModal } from './components/GlobalSearchModal';
+import { LoginGate } from './components/LoginGate';
+import { auditLogger } from './services/auditLogger';
+import { ShieldCheck, WifiOff } from 'lucide-react';
 
 import {
   INITIAL_FACULTY,
@@ -43,7 +46,8 @@ import {
   FeeInvoice,
   TimetableSlot,
   TeacherResultUploadBatch,
-  AppPage
+  AppPage,
+  AuthUserSession
 } from './types';
 
 export default function App() {
@@ -65,10 +69,61 @@ export default function App() {
   const [inquiries, setInquiries] = useState<AdmissionsInquiry[]>(INITIAL_INQUIRIES);
   const [resultBatches, setResultBatches] = useState<TeacherResultUploadBatch[]>(INITIAL_RESULT_BATCHES);
 
+  const AUTH_STORAGE_KEY = 'sa_active_auth_session_v2';
+
+  // Persistent One-Time Authentication Session from start of site
+  const [session, setSession] = useState<AuthUserSession | null>(() => {
+    try {
+      const saved = localStorage.getItem(AUTH_STORAGE_KEY);
+      if (saved) {
+        const parsed: AuthUserSession = JSON.parse(saved);
+        if (parsed && parsed.name) {
+          auditLogger.setClerkActor({
+            id: parsed.id,
+            fullName: parsed.name,
+            primaryEmail: parsed.email
+          });
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to parse active auth session:', e);
+    }
+    return null;
+  });
+
+  const handleLogout = () => {
+    if (session) {
+      auditLogger.log({
+        action: 'AUTH_LOGOUT',
+        actionLabel: `Session Closed: ${session.name}`,
+        resource: 'AuthSession:Logout',
+        resourceId: session.id,
+        severity: 'info',
+        details: { name: session.name, email: session.email, role: session.role }
+      });
+      auditLogger.setClerkActor(null);
+    }
+    setSession(null);
+    try {
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+    } catch {}
+    showToast('Terminal session signed out. Security gate locked.');
+  };
+
   // Global Modals State
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isAnnouncementsOpen, setIsAnnouncementsOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [unsyncedAuditCount, setUnsyncedAuditCount] = useState<number>(() => auditLogger.getUnsyncedCount());
+
+  // Subscribe to audit logger events
+  useEffect(() => {
+    const unsub = auditLogger.subscribe(() => {
+      setUnsyncedAuditCount(auditLogger.getUnsyncedCount());
+    });
+    return () => unsub();
+  }, []);
 
   // Keyboard shortcut Cmd+K / Ctrl+K
   useEffect(() => {
@@ -100,16 +155,52 @@ export default function App() {
       gpa: 3.85
     };
     setStudents(prev => [studentRecord, ...prev]);
+    auditLogger.log({
+      action: 'STUDENT_ENROLLED',
+      actionLabel: `Scholar Enrolled: ${studentRecord.name}`,
+      resource: `StudentRecord:${studentRecord.studentId}`,
+      resourceId: studentRecord.studentId,
+      severity: 'info',
+      details: {
+        name: studentRecord.name,
+        studentId: studentRecord.studentId,
+        grade: studentRecord.grade,
+        division: studentRecord.division,
+        parentGuardian: studentRecord.parentGuardian
+      }
+    });
     showToast(`Scholar ${studentRecord.name} enrolled with ID ${studentRecord.studentId}.`);
   };
 
   const handleUpdateStudent = (updatedStudent: StudentRecord) => {
     setStudents(prev => prev.map(s => (s.id === updatedStudent.id ? updatedStudent : s)));
+    auditLogger.log({
+      action: 'STUDENT_UPDATED',
+      actionLabel: `Scholar Record Updated: ${updatedStudent.name}`,
+      resource: `StudentRecord:${updatedStudent.studentId}`,
+      resourceId: updatedStudent.studentId,
+      severity: 'info',
+      details: {
+        name: updatedStudent.name,
+        grade: updatedStudent.grade,
+        enrollmentStatus: updatedStudent.enrollmentStatus,
+        gpa: updatedStudent.gpa
+      }
+    });
     showToast(`Record for ${updatedStudent.name} updated.`);
   };
 
   const handleDeleteStudent = (studentId: string) => {
+    const target = students.find(s => s.id === studentId);
     setStudents(prev => prev.filter(s => s.id !== studentId));
+    auditLogger.log({
+      action: 'STUDENT_DELETED',
+      actionLabel: `Scholar Record Expunged: ${target?.name || studentId}`,
+      resource: `StudentRecord:${target?.studentId || studentId}`,
+      resourceId: studentId,
+      severity: 'warning',
+      details: { studentId, name: target?.name }
+    });
     showToast('Student record deleted from database.');
   };
 
@@ -226,6 +317,24 @@ export default function App() {
     showToast(
       `Results for ${batch.courseCode} (${batch.records.length} scholars) published by ${batch.teacherName}!`
     );
+
+    auditLogger.log({
+      action: 'RESULTS_UPLOADED',
+      actionLabel: `Class Assessment Results Uploaded (${batch.courseCode})`,
+      resource: `TeacherResultUploadBatch:${batch.id}`,
+      resourceId: batch.id,
+      severity: 'info',
+      details: {
+        teacherName: batch.teacherName,
+        courseCode: batch.courseCode,
+        courseName: batch.courseName,
+        assessmentTitle: batch.assessmentTitle,
+        averageScore: batch.averageScore,
+        highestScore: batch.highestScore,
+        lowestScore: batch.lowestScore,
+        totalScholars: batch.records.length
+      }
+    });
   };
 
   // Staff Handlers
@@ -247,10 +356,19 @@ export default function App() {
       status: 'Unpaid'
     };
     setInvoices(prev => [inv, ...prev]);
+    auditLogger.log({
+      action: 'INVOICE_CREATED',
+      actionLabel: `Fee Invoice Generated: #${inv.id} (${inv.studentName})`,
+      resource: `FeeInvoice:${inv.id}`,
+      resourceId: inv.id,
+      severity: 'info',
+      details: { id: inv.id, studentName: inv.studentName, amount: inv.amount, description: inv.description }
+    });
     showToast(`Invoice ${inv.id} generated for ${inv.studentName}.`);
   };
 
   const handleRecordPayment = (invoiceId: string) => {
+    const targetInv = invoices.find(i => i.id === invoiceId);
     setInvoices(prev =>
       prev.map(inv =>
         inv.id === invoiceId
@@ -262,6 +380,19 @@ export default function App() {
           : inv
       )
     );
+    auditLogger.log({
+      action: 'INVOICE_PAID',
+      actionLabel: `Tuition Remittance Received: #${invoiceId}`,
+      resource: `FeeInvoice:${invoiceId}`,
+      resourceId: invoiceId,
+      severity: 'info',
+      details: {
+        invoiceId,
+        studentName: targetInv?.studentName,
+        amount: targetInv?.amount,
+        paidDate: new Date().toISOString().split('T')[0]
+      }
+    });
     showToast(`Payment recorded for invoice #${invoiceId}. Receipt issued.`);
   };
 
@@ -350,6 +481,24 @@ export default function App() {
     showToast('All system configurations restored to baseline.');
   };
 
+  // One-time login gate from the start of the site
+  if (!session) {
+    return (
+      <LoginGate
+        schoolName={siteSettings.schoolName}
+        onLogin={newSession => {
+          setSession(newSession);
+          if (newSession.rememberDevice) {
+            try {
+              localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newSession));
+            } catch {}
+          }
+          showToast(`Welcome back, ${newSession.name}!`);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-stone-100 flex flex-col font-sans text-stone-900 selection:bg-amber-200 selection:text-stone-900">
       
@@ -383,7 +532,37 @@ export default function App() {
             </button>
           </div>
           <div className="flex items-center gap-3 text-[11px]">
-            <span className="text-stone-400 hidden md:inline">Howdy, Administrator</span>
+            {unsyncedAuditCount > 0 && (
+              <button
+                onClick={() => setActivePage('admin')}
+                className="flex items-center gap-1 text-amber-300 hover:text-white bg-amber-500/20 border border-amber-500/40 px-2 py-0.5 rounded text-[10px] font-semibold cursor-pointer animate-pulse"
+                title={`${unsyncedAuditCount} unsynced logs buffered offline`}
+              >
+                <WifiOff className="w-3 h-3 text-amber-400" />
+                <span>{unsyncedAuditCount} Offline Queued</span>
+              </button>
+            )}
+            <button
+              onClick={() => setActivePage('admin')}
+              className="flex items-center gap-1 text-stone-300 hover:text-[#72aee6] transition-colors cursor-pointer text-[11px]"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Audit Logs</span>
+            </button>
+            <span className="text-stone-600 hidden sm:inline">|</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-stone-300 hidden md:inline truncate max-w-[140px]">
+                {session.name}
+              </span>
+              <button
+                onClick={handleLogout}
+                className="text-stone-400 hover:text-rose-400 text-[10px] cursor-pointer underline"
+                title="Sign out of this terminal session"
+              >
+                Sign Out
+              </button>
+            </div>
+            <span className="text-stone-600 hidden sm:inline">|</span>
             <button
               onClick={() => setActivePage('admin')}
               className="bg-[#2271b1] hover:bg-[#135e96] text-white px-2 py-0.5 rounded font-semibold text-[10px] cursor-pointer transition-colors"
@@ -405,6 +584,8 @@ export default function App() {
         onOpenAnnouncements={() => setIsAnnouncementsOpen(true)}
         unreadAnnouncementsCount={announcements.filter(a => a.urgent).length}
         schoolName={siteSettings.schoolName}
+        currentUser={session}
+        onLogout={handleLogout}
       />
 
       {/* Main Content Area - Strictly switching among the 5 requested pages */}
