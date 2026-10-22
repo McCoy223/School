@@ -9,6 +9,7 @@ import {
   TuitionStatement,
   TeacherResultUploadBatch
 } from '../types';
+import { IMAGES } from '../assets/images';
 
 export const SCHOOL_NAME = "St. Andrew's Academy";
 export const SCHOOL_MOTTO = "Ad Solem Virtus et Scientia (Virtue and Knowledge Toward the Light)";
@@ -595,7 +596,7 @@ export const INITIAL_STUDENT_RECORDS = [
     tuitionBalance: 4000,
     medicalNotes: 'Mild asthma (inhaler on file at infirmary). No dietary allergies.',
     enrolledCourses: ['PHYS-401', 'MATH-450', 'ENG-320', 'HIST-305', 'MUS-210', 'SPAN-302'],
-    idCardMockupUrl: '/src/assets/images/student_id_liam_1792630513061.jpg'
+    idCardMockupUrl: IMAGES.studentIdLiam
   },
   {
     id: 'stu-102',
@@ -614,7 +615,7 @@ export const INITIAL_STUDENT_RECORDS = [
     tuitionBalance: 0,
     medicalNotes: 'EpiPen for severe peanut/tree nut allergy.',
     enrolledCourses: ['PHYS-401', 'ENG-320', 'HIST-305', 'SPAN-302'],
-    idCardMockupUrl: '/src/assets/images/student_id_cordelia_1792630515573.jpg'
+    idCardMockupUrl: IMAGES.studentIdCordelia
   },
   {
     id: 'stu-103',
@@ -633,7 +634,7 @@ export const INITIAL_STUDENT_RECORDS = [
     tuitionBalance: 1200,
     medicalNotes: 'No known health restrictions or allergies.',
     enrolledCourses: ['PHYS-401', 'MATH-450', 'HIST-305'],
-    idCardMockupUrl: '/src/assets/images/student_id_badge_card_1792630517398.jpg'
+    idCardMockupUrl: IMAGES.studentIdBadgeCard
   },
   {
     id: 'stu-104',
@@ -652,7 +653,7 @@ export const INITIAL_STUDENT_RECORDS = [
     tuitionBalance: 0,
     medicalNotes: 'Clear medical history.',
     enrolledCourses: ['PHYS-401', 'MATH-450', 'ENG-320'],
-    idCardMockupUrl: '/src/assets/images/student_id_sophia_1792630517080.jpg'
+    idCardMockupUrl: IMAGES.studentIdSophia
   },
   {
     id: 'stu-105',

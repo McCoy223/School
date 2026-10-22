@@ -16,6 +16,7 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import { StudentRecord } from '../types';
+import { IMAGES } from '../assets/images';
 
 interface StudentIDCardModalProps {
   isOpen: boolean;
@@ -45,12 +46,12 @@ export const StudentIDCardModal: React.FC<StudentIDCardModalProps> = ({
   const mockupImage =
     student.idCardMockupUrl ||
     (student.name.toLowerCase().includes('liam')
-      ? '/src/assets/images/student_id_liam_1792630513061.jpg'
+      ? IMAGES.studentIdLiam
       : student.name.toLowerCase().includes('cordelia') || student.name.toLowerCase().includes('claire')
-      ? '/src/assets/images/student_id_cordelia_1792630515573.jpg'
+      ? IMAGES.studentIdCordelia
       : student.name.toLowerCase().includes('sophia')
-      ? '/src/assets/images/student_id_sophia_1792630517080.jpg'
-      : '/src/assets/images/student_id_badge_card_1792630517398.jpg');
+      ? IMAGES.studentIdSophia
+      : IMAGES.studentIdBadgeCard);
 
   if (!isOpen) return null;
 
