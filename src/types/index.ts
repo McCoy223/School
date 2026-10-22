@@ -114,20 +114,39 @@ export interface TuitionStatement {
   }[];
 }
 
+export interface AcademicDivision {
+  id: string;
+  name: string;
+  subtitle: string;
+  description: string;
+  highlights: string[];
+}
+
 export interface SiteSettings {
   schoolName: string;
   motto: string;
   foundedYear: number;
   heroHeadline: string;
   heroSubtitle: string;
+  heroCtaPrimary?: string;
+  heroCtaSecondary?: string;
   termName: string;
   admissionsDeadline: string;
   visitingHours: string;
   campusAddress: string;
   phone: string;
   emergencyPhone: string;
+  emailContact?: string;
   topRibbonAlert: string;
+  topRibbonLinkText?: string;
   accreditationText: string;
+  headOfSchoolName?: string;
+  headOfSchoolTitle?: string;
+  headOfSchoolQuote?: string;
+  headOfSchoolLetter?: string;
+  themeAccent?: 'amber' | 'emerald' | 'blue' | 'indigo' | 'rose';
+  footerNotice?: string;
+  academicDivisions?: AcademicDivision[];
 }
 
 export interface AdmissionsInquiry {

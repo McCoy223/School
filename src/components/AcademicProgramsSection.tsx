@@ -3,15 +3,20 @@ import { BookOpen, Compass, Award, ArrowRight, Check } from 'lucide-react';
 import { IMAGES } from '../assets/images';
 import { ACADEMIC_DIVISIONS } from '../data/mockData';
 
+import { SiteSettings } from '../types';
+
 interface AcademicProgramsSectionProps {
   onExploreCourses: () => void;
   onViewFaculty: () => void;
+  settings?: SiteSettings;
 }
 
 export const AcademicProgramsSection: React.FC<AcademicProgramsSectionProps> = ({
   onExploreCourses,
-  onViewFaculty
+  onViewFaculty,
+  settings
 }) => {
+  const divisions = settings?.academicDivisions || ACADEMIC_DIVISIONS;
   return (
     <section className="py-16 bg-white border-b border-stone-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -94,7 +99,7 @@ export const AcademicProgramsSection: React.FC<AcademicProgramsSectionProps> = (
 
         {/* 3 Academic Divisions Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {ACADEMIC_DIVISIONS.map((div, idx) => (
+          {divisions.map((div, idx) => (
             <div
               key={idx}
               className="bg-white rounded-xl border border-stone-200 p-6 flex flex-col justify-between hover:shadow-xs transition-shadow"

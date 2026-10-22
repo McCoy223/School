@@ -72,7 +72,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 onClick={onNavigateToPortals}
                 className="px-6 py-3 text-sm font-semibold text-white bg-stone-900 hover:bg-stone-800 rounded-lg shadow-sm transition-all flex items-center gap-2 group cursor-pointer"
               >
-                <span>Access Student & Parent Portals</span>
+                <span>{settings.heroCtaPrimary || 'Access Student & Parent Portals'}</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
               </button>
 
@@ -81,7 +81,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 className="px-5 py-3 text-sm font-medium text-stone-700 hover:text-stone-950 bg-stone-100 hover:bg-stone-200 border border-stone-200 rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
               >
                 <Calendar className="w-4 h-4 text-stone-500" />
-                <span>View Event Calendar</span>
+                <span>{settings.heroCtaSecondary || 'View Event Calendar'}</span>
               </button>
 
               <button

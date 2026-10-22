@@ -508,20 +508,23 @@ export const QUICK_STATS = [
   { label: 'Annual Merit & Aid', value: '$4.2M', detail: 'Need-blind admissions commitment' }
 ];
 
-export const ACADEMIC_DIVISIONS = [
+export const INITIAL_ACADEMIC_DIVISIONS = [
   {
+    id: 'div-1',
     name: 'Lower School (Grades K–5)',
     subtitle: 'Foundation of Inquiry & Wonder',
     description: 'Nurturing intellectual curiosity, joyful discovery, foundational literacy, and Singapore math through immersive outdoor exploration and project laboratories.',
     highlights: ['Bilingual language introduction (French & Spanish)', 'Maker & natural sciences laboratory', 'Daily instrumental and choral foundations']
   },
   {
+    id: 'div-2',
     name: 'Middle School (Grades 6–8)',
     subtitle: 'Expanding Rigor & Character',
     description: 'Developing independent thought, disciplined writing, collaborative robotics, and empathetic global citizenship during formative adolescent years.',
     highlights: ['Harkness method seminar introductions', 'VEX Robotics & coding sequence', 'Advisory mentorship & athletic participation']
   },
   {
+    id: 'div-3',
     name: 'Upper School (Grades 9–12)',
     subtitle: 'Scholarly Excellence & University Preparation',
     description: 'A pre-collegiate curriculum offering 38 Advanced Placement and post-AP honors courses, faculty-mentored senior research theses, and world-class arts.',
@@ -529,20 +532,33 @@ export const ACADEMIC_DIVISIONS = [
   }
 ];
 
+export const ACADEMIC_DIVISIONS = INITIAL_ACADEMIC_DIVISIONS;
+
 export const DEFAULT_SITE_SETTINGS = {
   schoolName: "St. Andrew's Academy",
   motto: "Ad Solem Virtus et Scientia (Virtue and Knowledge Toward the Light)",
   foundedYear: 1903,
   heroHeadline: "Cultivating Intellect, Character, and Purpose.",
   heroSubtitle: "St. Andrew's Academy prepares curious minds for rigorous collegiate scholarship and ethical leadership. Guided by an 8:1 student-to-faculty ratio, our students pursue truth across 38 advanced disciplines, classical arts, and competitive athletics.",
+  heroCtaPrimary: "Explore Academic Curriculum",
+  heroCtaSecondary: "Admissions & Tuition",
   termName: "Fall Term 2026",
   admissionsDeadline: "January 15, 2027",
   visitingHours: "Mon–Sat 09:00–16:00",
   campusAddress: "1903 Academy Quadrangle, Worcester County, MA 01609",
   phone: "(555) 843-2000",
   emergencyPhone: "(555) 843-2911",
+  emailContact: "admissions@standrewsacademy.org",
   topRibbonAlert: "Fall Symphony Gala this Saturday →",
-  accreditationText: "New England Association of Schools and Colleges (NEASC) · International Baccalaureate (IB) World Continuum"
+  topRibbonLinkText: "View Schedule",
+  accreditationText: "New England Association of Schools and Colleges (NEASC) · International Baccalaureate (IB) World Continuum",
+  headOfSchoolName: "Dr. Elizabeth Harrington, Ed.D.",
+  headOfSchoolTitle: "Head of School & Professor of Educational Philosophy",
+  headOfSchoolQuote: "We teach our scholars not merely what to think, but how to inquire with unflinching integrity and profound empathy.",
+  headOfSchoolLetter: "Welcome to St. Andrew's Academy. For over a century, our community has stood at the crossroads of academic excellence and timeless character formation. Here, scholarship is neither passive nor solitary; it is an active dialogic journey shared between engaged faculty and intellectually voracious students.",
+  themeAccent: 'amber' as const,
+  footerNotice: "St. Andrew's Academy admits scholars of any race, color, national or ethnic origin to all rights, privileges, programs, and activities generally accorded or made available to students.",
+  academicDivisions: INITIAL_ACADEMIC_DIVISIONS
 };
 
 export const INITIAL_INQUIRIES = [

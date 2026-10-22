@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import {
-  Settings,
+  LayoutDashboard,
   FileText,
+  Globe,
   Calendar,
   Users,
-  Bell,
+  Image as ImageIcon,
   Inbox,
+  Palette,
+  Settings,
   CheckCircle2,
   Trash2,
   Edit3,
@@ -20,7 +23,26 @@ import {
   TrendingUp,
   MapPin,
   Clock,
-  Sparkles
+  Sparkles,
+  Smartphone,
+  Tablet,
+  Monitor,
+  ChevronDown,
+  ChevronRight,
+  Bold,
+  Italic,
+  List,
+  Quote,
+  Heading2,
+  Search,
+  Filter,
+  Check,
+  Phone,
+  Mail,
+  GraduationCap,
+  Building,
+  Sliders,
+  Maximize2
 } from 'lucide-react';
 import {
   SiteSettings,
@@ -29,8 +51,10 @@ import {
   FacultyMember,
   AdmissionsInquiry,
   QuickStat,
-  EventCategory
+  EventCategory,
+  AcademicDivision
 } from '../types';
+import { IMAGES } from '../assets/images';
 
 interface AdminPortalProps {
   settings: SiteSettings;
@@ -56,6 +80,17 @@ interface AdminPortalProps {
   onViewLiveSite: () => void;
 }
 
+type WpMenuSection =
+  | 'dashboard'
+  | 'site-editor'
+  | 'posts'
+  | 'events'
+  | 'faculty'
+  | 'media'
+  | 'forms'
+  | 'appearance'
+  | 'settings';
+
 export const AdminPortal: React.FC<AdminPortalProps> = ({
   settings,
   onUpdateSettings,
@@ -79,24 +114,37 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   onResetDefaults,
   onViewLiveSite
 }) => {
-  const [activeAdminTab, setActiveAdminTab] = useState<'general' | 'announcements' | 'events' | 'faculty' | 'inquiries' | 'stats'>('general');
+  // Navigation State
+  const [activeMenu, setActiveMenu] = useState<WpMenuSection>('dashboard');
+  const [editorSubTab, setEditorSubTab] = useState<'hero' | 'divisions' | 'welcome' | 'stats' | 'ribbon' | 'footer'>('hero');
+  const [settingsSubTab, setSettingsSubTab] = useState<'general' | 'contact' | 'academics'>('general');
+
+  // Working copy of settings for real-time live preview
   const [localSettings, setLocalSettings] = useState<SiteSettings>(settings);
   const [localStats, setLocalStats] = useState<QuickStat[]>(quickStats);
-  const [saveSuccessNotice, setSaveSuccessNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ type: 'success' | 'info' | 'error'; message: string } | null>(null);
 
-  // Announcement modal state
-  const [editingAnnouncement, setEditingAnnouncement] = useState<SchoolAnnouncement | null>(null);
-  const [isAddAnnouncementOpen, setIsAddAnnouncementOpen] = useState(false);
-  const [newAnnTitle, setNewAnnTitle] = useState('');
-  const [newAnnCategory, setNewAnnCategory] = useState<'Academics' | 'Campus Alert' | 'Student Life' | 'Arts & Athletics'>('Academics');
-  const [newAnnAuthor, setNewAnnAuthor] = useState('Office of Communications');
-  const [newAnnDate, setNewAnnDate] = useState('2026-10-21');
-  const [newAnnUrgent, setNewAnnUrgent] = useState(false);
-  const [newAnnContent, setNewAnnContent] = useState('');
+  // Live Visual Customizer mode
+  const [isLiveCustomizerOpen, setIsLiveCustomizerOpen] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
 
-  // Event modal state
-  const [editingEvent, setEditingEvent] = useState<SchoolEvent | null>(null);
+  // Quick Draft in Dashboard
+  const [quickDraftTitle, setQuickDraftTitle] = useState('');
+  const [quickDraftContent, setQuickDraftContent] = useState('');
+
+  // Announcement Post Modal / Form
+  const [isAddPostOpen, setIsAddPostOpen] = useState(false);
+  const [editingPost, setEditingPost] = useState<SchoolAnnouncement | null>(null);
+  const [postTitle, setPostTitle] = useState('');
+  const [postCategory, setPostCategory] = useState<'Academics' | 'Campus Alert' | 'Student Life' | 'Arts & Athletics'>('Academics');
+  const [postAuthor, setPostAuthor] = useState('Headmaster Office');
+  const [postDate, setPostDate] = useState('2026-10-22');
+  const [postUrgent, setPostUrgent] = useState(false);
+  const [postContent, setPostContent] = useState('');
+
+  // Event Modal / Form
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<SchoolEvent | null>(null);
   const [eventForm, setEventForm] = useState({
     title: '',
     description: '',
@@ -105,13 +153,13 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     time: '14:00 - 15:30',
     location: '',
     building: '',
-    organizer: '',
+    organizer: 'Academic Affairs',
     targetAudience: 'all' as 'all' | 'students' | 'parents' | 'faculty'
   });
 
-  // Faculty modal state
-  const [editingFaculty, setEditingFaculty] = useState<FacultyMember | null>(null);
+  // Faculty Modal / Form
   const [isAddFacultyOpen, setIsAddFacultyOpen] = useState(false);
+  const [editingFaculty, setEditingFaculty] = useState<FacultyMember | null>(null);
   const [facultyForm, setFacultyForm] = useState({
     name: '',
     title: '',
@@ -126,1450 +174,2197 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     consultationAvailable: true
   });
 
-  const triggerNotice = (msg: string) => {
-    setSaveSuccessNotice(msg);
-    setTimeout(() => setSaveSuccessNotice(null), 2500);
+  // Media Library Selection State
+  const [selectedMedia, setSelectedMedia] = useState<string | null>(null);
+
+  // New Academic Division Form
+  const [newDivision, setNewDivision] = useState<Omit<AcademicDivision, 'id'>>({
+    name: '',
+    subtitle: '',
+    description: '',
+    highlights: ['']
+  });
+
+  const triggerNotice = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
+    setNotice({ message, type });
+    setTimeout(() => setNotice(null), 3000);
   };
 
-  const handleSaveGeneralSettings = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Commit Settings Changes to Root
+  const handleSaveSettings = () => {
     onUpdateSettings(localSettings);
-    triggerNotice('General site settings and hero copy saved successfully!');
+    triggerNotice('WordPress Settings successfully published & updated on live site!');
   };
 
-  const handleSaveStats = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveStats = () => {
     onUpdateQuickStats(localStats);
-    triggerNotice('Academy KPI metrics updated!');
+    triggerNotice('Academy Key Performance Metrics updated!');
   };
 
-  // Add / Edit Announcement handlers
-  const handleSaveAnnouncement = (e: React.FormEvent) => {
+  // Quick Draft submission from Dashboard
+  const handleSaveQuickDraft = (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingAnnouncement) {
-      onUpdateAnnouncement(editingAnnouncement);
-      setEditingAnnouncement(null);
-      triggerNotice('Announcement updated successfully.');
+    if (!quickDraftTitle) return;
+    onAddAnnouncement({
+      title: quickDraftTitle,
+      category: 'Student Life',
+      author: 'Admin (Quick Draft)',
+      date: new Date().toISOString().split('T')[0],
+      urgent: false,
+      content: quickDraftContent || 'Draft announcement created from WordPress admin console.'
+    });
+    setQuickDraftTitle('');
+    setQuickDraftContent('');
+    triggerNotice('Quick Draft published as school announcement!');
+  };
+
+  // Post / Announcement Handlers
+  const handleOpenAddPost = () => {
+    setEditingPost(null);
+    setPostTitle('');
+    setPostContent('');
+    setPostCategory('Academics');
+    setPostAuthor('Administration');
+    setPostDate(new Date().toISOString().split('T')[0]);
+    setPostUrgent(false);
+    setIsAddPostOpen(true);
+  };
+
+  const handleEditPost = (post: SchoolAnnouncement) => {
+    setEditingPost(post);
+    setPostTitle(post.title);
+    setPostContent(post.content);
+    setPostCategory(post.category);
+    setPostAuthor(post.author);
+    setPostDate(post.date);
+    setPostUrgent(post.urgent);
+    setIsAddPostOpen(true);
+  };
+
+  const handleSavePost = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!postTitle) return;
+    if (editingPost) {
+      onUpdateAnnouncement({
+        ...editingPost,
+        title: postTitle,
+        category: postCategory,
+        author: postAuthor,
+        date: postDate,
+        urgent: postUrgent,
+        content: postContent
+      });
+      triggerNotice(`Post "${postTitle}" updated successfully.`);
     } else {
-      if (!newAnnTitle) return;
       onAddAnnouncement({
-        title: newAnnTitle,
-        category: newAnnCategory,
-        author: newAnnAuthor,
-        date: newAnnDate,
-        urgent: newAnnUrgent,
-        content: newAnnContent
+        title: postTitle,
+        category: postCategory,
+        author: postAuthor,
+        date: postDate,
+        urgent: postUrgent,
+        content: postContent
       });
-      setIsAddAnnouncementOpen(false);
-      setNewAnnTitle('');
-      setNewAnnContent('');
-      triggerNotice('New announcement published.');
+      triggerNotice(`Post "${postTitle}" published live.`);
     }
+    setIsAddPostOpen(false);
   };
 
-  // Add / Edit Event handlers
-  const handleSaveEvent = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingEvent) {
-      onUpdateEvent(editingEvent);
-      setEditingEvent(null);
-      triggerNotice('Event updated.');
-    } else {
-      if (!eventForm.title) return;
-      onAddEvent({
-        ...eventForm,
-        isPublic: true
-      });
-      setIsAddEventOpen(false);
-      setEventForm({
-        title: '',
-        description: '',
-        category: 'academic',
-        date: '2026-11-15',
-        time: '14:00 - 15:30',
-        location: '',
-        building: '',
-        organizer: '',
-        targetAudience: 'all'
-      });
-      triggerNotice('New event scheduled on master calendar.');
-    }
-  };
-
-  // Add / Edit Faculty handlers
-  const handleSaveFaculty = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingFaculty) {
-      onUpdateFaculty(editingFaculty);
-      setEditingFaculty(null);
-      triggerNotice('Faculty profile updated.');
-    } else {
-      if (!facultyForm.name) return;
-      onAddFaculty({
-        name: facultyForm.name,
-        title: facultyForm.title,
-        department: facultyForm.department,
-        email: facultyForm.email,
-        officeRoom: facultyForm.officeRoom,
-        officeHours: facultyForm.officeHours,
-        phone: facultyForm.phone,
-        bio: facultyForm.bio,
-        education: facultyForm.education.split(',').map(s => s.trim()).filter(Boolean),
-        coursesTaught: facultyForm.coursesTaught.split(',').map(s => s.trim()).filter(Boolean),
-        consultationAvailable: facultyForm.consultationAvailable,
-        avatarColor: 'bg-stone-800'
-      });
-      setIsAddFacultyOpen(false);
-      setFacultyForm({
-        name: '',
-        title: '',
-        department: 'Sciences & Mathematics',
-        email: '',
-        officeRoom: '',
-        officeHours: '',
-        phone: '',
-        bio: '',
-        education: '',
-        coursesTaught: '',
-        consultationAvailable: true
-      });
-      triggerNotice('New faculty member added to directory.');
-    }
-  };
+  // Media Library assets list
+  const mediaLibraryItems = [
+    { title: 'Campus Historic Quadrangle', url: IMAGES.campusHero, category: 'Hero Banners', size: '1067 KB' },
+    { title: 'Biotechnology & Scholars Lab', url: IMAGES.studentsAcademics, category: 'Academics', size: '915 KB' },
+    { title: 'Symphony Hall Performance', url: IMAGES.artsAthletics, category: 'Campus Life', size: '1016 KB' },
+    { title: 'Dr. Elizabeth Harrington Portrait', url: IMAGES.headOfSchool, category: 'Head of School', size: '746 KB' },
+    { title: 'Student Liam ID Card Mockup', url: IMAGES.studentIdLiam, category: 'Student ID Cards', size: '742 KB' },
+    { title: 'Student Claire ID Card Mockup', url: IMAGES.studentIdCordelia, category: 'Student ID Cards', size: '606 KB' },
+    { title: 'Student Sophia ID Card Mockup', url: IMAGES.studentIdSophia, category: 'Student ID Cards', size: '727 KB' },
+    { title: 'Official Smart Badge Template', url: IMAGES.studentIdBadgeCard, category: 'Smart Badges', size: '656 KB' }
+  ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14">
-      
-      {/* Notice alert */}
-      {saveSuccessNotice && (
-        <div className="fixed top-20 right-6 z-50 bg-stone-900 text-amber-200 text-xs px-4 py-2.5 rounded-lg shadow-xl border border-stone-700 flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-          <span>{saveSuccessNotice}</span>
+    <div className="min-h-screen bg-[#f0f0f1] font-sans text-[#2c3338] flex flex-col">
+      {/* 1. Iconic WordPress Dark Top Bar */}
+      <header className="bg-[#1d2327] text-[#c3c4c7] text-xs h-9 px-3 sm:px-4 flex items-center justify-between z-30 select-none border-b border-[#2c3338]">
+        {/* Left cluster */}
+        <div className="flex items-center gap-4">
+          {/* WordPress Logo */}
+          <div className="flex items-center gap-1.5 hover:text-white cursor-pointer py-1 font-semibold text-white">
+            <div className="w-5 h-5 rounded-full bg-[#2271b1] text-white flex items-center justify-center font-serif font-black text-[11px] leading-none shadow-xs">
+              W
+            </div>
+            <span className="hidden sm:inline font-bold">WordPress</span>
+          </div>
+
+          <div className="h-4 w-px bg-stone-700 hidden sm:block" />
+
+          {/* Site Name & Visit Site */}
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-white truncate max-w-[140px] sm:max-w-none">
+              {localSettings.schoolName}
+            </span>
+            <button
+              onClick={onViewLiveSite}
+              className="text-[#72aee6] hover:text-white flex items-center gap-1 transition-colors py-0.5 px-1.5 rounded hover:bg-stone-800 cursor-pointer"
+              title="Return to public school dashboard"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Visit Site</span>
+            </button>
+          </div>
+
+          <div className="h-4 w-px bg-stone-700 hidden lg:block" />
+
+          {/* Inquiries Bubble */}
+          <button
+            onClick={() => setActiveMenu('forms')}
+            className="hidden sm:flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer"
+          >
+            <Inbox className="w-3.5 h-3.5 text-stone-400" />
+            <span className="bg-[#2271b1] text-white rounded-full px-1.5 py-0.2 text-[10px] font-bold">
+              {inquiries.filter(i => i.status === 'new').length}
+            </span>
+          </button>
+
+          {/* "+ New" Dropdown */}
+          <div className="relative group">
+            <button className="flex items-center gap-1 hover:text-white py-1 px-1.5 rounded hover:bg-stone-800 transition-colors cursor-pointer">
+              <Plus className="w-3.5 h-3.5 text-[#72aee6]" />
+              <span className="hidden sm:inline">New</span>
+              <ChevronDown className="w-3 h-3 text-stone-500" />
+            </button>
+            <div className="absolute left-0 top-full hidden group-hover:flex flex-col bg-[#1d2327] border border-[#2c3338] rounded-b shadow-xl py-1 min-w-[150px] z-50 text-[11px]">
+              <button
+                onClick={handleOpenAddPost}
+                className="px-3 py-1.5 text-left hover:bg-[#2271b1] hover:text-white transition-colors cursor-pointer"
+              >
+                Post / Announcement
+              </button>
+              <button
+                onClick={() => {
+                  setActiveMenu('events');
+                  setIsAddEventOpen(true);
+                }}
+                className="px-3 py-1.5 text-left hover:bg-[#2271b1] hover:text-white transition-colors cursor-pointer"
+              >
+                School Event
+              </button>
+              <button
+                onClick={() => {
+                  setActiveMenu('faculty');
+                  setIsAddFacultyOpen(true);
+                }}
+                className="px-3 py-1.5 text-left hover:bg-[#2271b1] hover:text-white transition-colors cursor-pointer"
+              >
+                Teacher Profile
+              </button>
+              <button
+                onClick={() => setActiveMenu('site-editor')}
+                className="px-3 py-1.5 text-left hover:bg-[#2271b1] hover:text-white transition-colors cursor-pointer"
+              >
+                Page Section
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Right cluster: Live Customizer & User */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsLiveCustomizerOpen(true)}
+            className="flex items-center gap-1.5 bg-[#2271b1] hover:bg-[#135e96] text-white px-2.5 py-1 rounded text-[11px] font-semibold transition-colors cursor-pointer shadow-xs"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            <span>Live Customizer</span>
+          </button>
+
+          <div className="flex items-center gap-2 text-stone-300">
+            <span className="hidden md:inline text-[11px]">Howdy,</span>
+            <span className="font-semibold text-white text-[11px]">Administrator</span>
+            <div className="w-6 h-6 rounded-full bg-amber-700 text-white flex items-center justify-center font-bold text-xs ring-1 ring-stone-600">
+              A
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* WordPress Notice Banner */}
+      {notice && (
+        <div
+          className={`mx-4 sm:mx-6 mt-4 p-3 rounded border text-xs flex items-center justify-between shadow-xs ${
+            notice.type === 'success'
+              ? 'bg-[#edf7ed] border-[#135e96] text-[#0f5132]'
+              : 'bg-[#fff8e5] border-[#f0b849] text-[#855a00]'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-[#2271b1]" />
+            <span className="font-medium">{notice.message}</span>
+          </div>
+          <button onClick={() => setNotice(null)} className="text-stone-500 hover:text-stone-800">
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
 
-      {/* Admin Header Card */}
-      <div className="bg-stone-900 text-white rounded-xl p-6 mb-8 shadow-sm">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-amber-300 mb-1">
-              <ShieldCheck className="w-4 h-4" />
-              <span>Academy Administration & Site Content Management System</span>
+      {/* Main WordPress Two-Column Container */}
+      <div className="flex-1 flex flex-col md:flex-row">
+        {/* 2. WordPress Left Navigation Sidebar */}
+        <aside className="w-full md:w-56 lg:w-64 bg-[#1d2327] text-[#c3c4c7] shrink-0 border-r border-[#2c3338] select-none">
+          <div className="py-2">
+            <div className="px-4 py-2 text-[10px] uppercase font-bold tracking-wider text-stone-500">
+              Site Administration
             </div>
-            <h2 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight">
-              Site Administration Console
-            </h2>
-            <p className="text-stone-300 text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed">
-              Manage website metadata, homepage hero copy, published school bulletins, faculty listings, master events, and incoming prospective student admissions inquiries in real time.
-            </p>
-          </div>
 
-          <div className="flex items-center gap-2.5 shrink-0">
-            <button
-              onClick={onViewLiveSite}
-              className="px-3.5 py-2 text-xs font-semibold text-stone-900 bg-amber-200 hover:bg-amber-100 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-            >
-              <Eye className="w-3.5 h-3.5" />
-              <span>Preview Live Site</span>
-            </button>
-            <button
-              onClick={onResetDefaults}
-              className="px-3.5 py-2 text-xs font-medium text-stone-300 hover:text-white bg-stone-800 hover:bg-stone-700 border border-stone-700 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
-              title="Reset sample data back to standard demo state"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reset Defaults</span>
-            </button>
-          </div>
-        </div>
+            <nav className="space-y-0.5 text-xs">
+              {/* Dashboard */}
+              <button
+                onClick={() => setActiveMenu('dashboard')}
+                className={`w-full flex items-center justify-between px-4 py-2.5 transition-colors cursor-pointer text-left ${
+                  activeMenu === 'dashboard'
+                    ? 'bg-[#2271b1] text-white font-semibold'
+                    : 'hover:bg-[#2c3338] hover:text-[#72aee6]'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <LayoutDashboard className="w-4 h-4" />
+                  <span>Dashboard</span>
+                </div>
+                {activeMenu === 'dashboard' && <ChevronRight className="w-3.5 h-3.5" />}
+              </button>
 
-        {/* Admin Navigation Tabs */}
-        <div className="flex items-center gap-1.5 p-1 bg-stone-800/90 rounded-lg border border-stone-700/80 mt-6 overflow-x-auto">
-          <button
-            onClick={() => setActiveAdminTab('general')}
-            className={`px-3.5 py-1.5 text-xs font-semibold rounded-md transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
-              activeAdminTab === 'general' ? 'bg-amber-100 text-stone-950 shadow-xs' : 'text-stone-300 hover:text-white'
-            }`}
-          >
-            <Settings className="w-3.5 h-3.5" />
-            <span>Site Info & Hero Copy</span>
-          </button>
-          <button
-            onClick={() => setActiveAdminTab('announcements')}
-            className={`px-3.5 py-1.5 text-xs font-semibold rounded-md transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
-              activeAdminTab === 'announcements' ? 'bg-amber-100 text-stone-950 shadow-xs' : 'text-stone-300 hover:text-white'
-            }`}
-          >
-            <Bell className="w-3.5 h-3.5" />
-            <span>Bulletins & Alerts ({announcements.length})</span>
-          </button>
-          <button
-            onClick={() => setActiveAdminTab('events')}
-            className={`px-3.5 py-1.5 text-xs font-semibold rounded-md transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
-              activeAdminTab === 'events' ? 'bg-amber-100 text-stone-950 shadow-xs' : 'text-stone-300 hover:text-white'
-            }`}
-          >
-            <Calendar className="w-3.5 h-3.5" />
-            <span>Master Calendar ({events.length})</span>
-          </button>
-          <button
-            onClick={() => setActiveAdminTab('faculty')}
-            className={`px-3.5 py-1.5 text-xs font-semibold rounded-md transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
-              activeAdminTab === 'faculty' ? 'bg-amber-100 text-stone-950 shadow-xs' : 'text-stone-300 hover:text-white'
-            }`}
-          >
-            <Users className="w-3.5 h-3.5" />
-            <span>Faculty Directory ({facultyList.length})</span>
-          </button>
-          <button
-            onClick={() => setActiveAdminTab('inquiries')}
-            className={`px-3.5 py-1.5 text-xs font-semibold rounded-md transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
-              activeAdminTab === 'inquiries' ? 'bg-amber-100 text-stone-950 shadow-xs' : 'text-stone-300 hover:text-white'
-            }`}
-          >
-            <Inbox className="w-3.5 h-3.5" />
-            <span>Admissions Inquiries ({inquiries.length})</span>
-          </button>
-          <button
-            onClick={() => setActiveAdminTab('stats')}
-            className={`px-3.5 py-1.5 text-xs font-semibold rounded-md transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
-              activeAdminTab === 'stats' ? 'bg-amber-100 text-stone-950 shadow-xs' : 'text-stone-300 hover:text-white'
-            }`}
-          >
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>KPI Metrics ({quickStats.length})</span>
-          </button>
-        </div>
+              {/* Site Editor & Gutenberg Builder */}
+              <button
+                onClick={() => setActiveMenu('site-editor')}
+                className={`w-full flex items-center justify-between px-4 py-2.5 transition-colors cursor-pointer text-left ${
+                  activeMenu === 'site-editor'
+                    ? 'bg-[#2271b1] text-white font-semibold'
+                    : 'hover:bg-[#2c3338] hover:text-[#72aee6]'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Globe className="w-4 h-4 text-emerald-400" />
+                  <span>Site & Page Editor</span>
+                </div>
+                <span className="text-[10px] bg-emerald-950 text-emerald-300 px-1.5 py-0.5 rounded font-mono font-bold">
+                  CMS
+                </span>
+              </button>
+
+              {/* Posts / Announcements */}
+              <button
+                onClick={() => setActiveMenu('posts')}
+                className={`w-full flex items-center justify-between px-4 py-2.5 transition-colors cursor-pointer text-left ${
+                  activeMenu === 'posts'
+                    ? 'bg-[#2271b1] text-white font-semibold'
+                    : 'hover:bg-[#2c3338] hover:text-[#72aee6]'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <FileText className="w-4 h-4" />
+                  <span>Posts & News</span>
+                </div>
+                <span className="text-[10px] text-stone-400 font-mono">{announcements.length}</span>
+              </button>
+
+              {/* Events & Calendar */}
+              <button
+                onClick={() => setActiveMenu('events')}
+                className={`w-full flex items-center justify-between px-4 py-2.5 transition-colors cursor-pointer text-left ${
+                  activeMenu === 'events'
+                    ? 'bg-[#2271b1] text-white font-semibold'
+                    : 'hover:bg-[#2c3338] hover:text-[#72aee6]'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Calendar className="w-4 h-4" />
+                  <span>Master Calendar</span>
+                </div>
+                <span className="text-[10px] text-stone-400 font-mono">{events.length}</span>
+              </button>
+
+              {/* Faculty & Staff */}
+              <button
+                onClick={() => setActiveMenu('faculty')}
+                className={`w-full flex items-center justify-between px-4 py-2.5 transition-colors cursor-pointer text-left ${
+                  activeMenu === 'faculty'
+                    ? 'bg-[#2271b1] text-white font-semibold'
+                    : 'hover:bg-[#2c3338] hover:text-[#72aee6]'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Users className="w-4 h-4" />
+                  <span>Teachers & Staff</span>
+                </div>
+                <span className="text-[10px] text-stone-400 font-mono">{facultyList.length}</span>
+              </button>
+
+              {/* Media Library */}
+              <button
+                onClick={() => setActiveMenu('media')}
+                className={`w-full flex items-center justify-between px-4 py-2.5 transition-colors cursor-pointer text-left ${
+                  activeMenu === 'media'
+                    ? 'bg-[#2271b1] text-white font-semibold'
+                    : 'hover:bg-[#2c3338] hover:text-[#72aee6]'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <ImageIcon className="w-4 h-4" />
+                  <span>Media Library</span>
+                </div>
+                <span className="text-[10px] text-stone-400 font-mono">{mediaLibraryItems.length}</span>
+              </button>
+
+              {/* Admissions Forms & Inquiries */}
+              <button
+                onClick={() => setActiveMenu('forms')}
+                className={`w-full flex items-center justify-between px-4 py-2.5 transition-colors cursor-pointer text-left ${
+                  activeMenu === 'forms'
+                    ? 'bg-[#2271b1] text-white font-semibold'
+                    : 'hover:bg-[#2c3338] hover:text-[#72aee6]'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Inbox className="w-4 h-4" />
+                  <span>Admissions Inquiries</span>
+                </div>
+                {inquiries.filter(i => i.status === 'new').length > 0 && (
+                  <span className="text-[10px] bg-red-600 text-white rounded-full px-1.5 py-0.2 font-bold">
+                    {inquiries.filter(i => i.status === 'new').length}
+                  </span>
+                )}
+              </button>
+
+              <div className="pt-3 pb-1 px-4 text-[10px] uppercase font-bold tracking-wider text-stone-500">
+                Design & Core
+              </div>
+
+              {/* Appearance / Theme Customizer */}
+              <button
+                onClick={() => setActiveMenu('appearance')}
+                className={`w-full flex items-center justify-between px-4 py-2.5 transition-colors cursor-pointer text-left ${
+                  activeMenu === 'appearance'
+                    ? 'bg-[#2271b1] text-white font-semibold'
+                    : 'hover:bg-[#2c3338] hover:text-[#72aee6]'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Palette className="w-4 h-4 text-amber-400" />
+                  <span>Appearance & Themes</span>
+                </div>
+              </button>
+
+              {/* Settings */}
+              <button
+                onClick={() => setActiveMenu('settings')}
+                className={`w-full flex items-center justify-between px-4 py-2.5 transition-colors cursor-pointer text-left ${
+                  activeMenu === 'settings'
+                    ? 'bg-[#2271b1] text-white font-semibold'
+                    : 'hover:bg-[#2c3338] hover:text-[#72aee6]'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Settings className="w-4 h-4" />
+                  <span>Site Settings</span>
+                </div>
+              </button>
+            </nav>
+
+            {/* Quick Actions Footer inside Sidebar */}
+            <div className="mt-8 px-4 py-3 mx-2 bg-[#2c3338] rounded text-[11px] text-stone-400 space-y-2">
+              <div className="flex items-center justify-between text-stone-300 font-semibold">
+                <span>WordPress v6.7</span>
+                <span className="text-emerald-400 text-[10px]">Active</span>
+              </div>
+              <p className="text-[10px] leading-tight">
+                Any changes made here instantly sync across the entire school management system.
+              </p>
+              <button
+                onClick={onResetDefaults}
+                className="w-full py-1 text-center bg-stone-700 hover:bg-stone-600 text-stone-200 rounded text-[10px] transition-colors cursor-pointer"
+              >
+                Reset Demo Content
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        {/* 3. Main WordPress Content Workspace */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl">
+          {/* ======================================================== */}
+          {/* TAB 1: WORDPRESS DASHBOARD OVERVIEW                     */}
+          {/* ======================================================== */}
+          {activeMenu === 'dashboard' && (
+            <div className="space-y-6">
+              {/* Welcome Banner */}
+              <div className="bg-white border border-[#c3c4c7] p-6 rounded shadow-xs">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <h1 className="text-2xl font-serif font-bold text-[#1d2327]">
+                      Welcome to the {localSettings.schoolName} Content Management System
+                    </h1>
+                    <p className="text-stone-600 text-xs sm:text-sm mt-1 max-w-2xl">
+                      Like WordPress, this admin console gives you complete authority to edit every headline, announcement, division, faculty profile, and styling setting across the school platform.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => setActiveMenu('site-editor')}
+                      className="px-4 py-2 bg-[#2271b1] hover:bg-[#135e96] text-white rounded text-xs font-semibold shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Globe className="w-3.5 h-3.5" />
+                      <span>Edit Site Content</span>
+                    </button>
+                    <button
+                      onClick={() => setIsLiveCustomizerOpen(true)}
+                      className="px-3.5 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-300 rounded text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Live Preview</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Two-column WordPress Dashboard Widgets Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Left 7 Columns: At a Glance + Activity Stream */}
+                <div className="lg:col-span-7 space-y-6">
+                  {/* At a Glance Widget */}
+                  <div className="bg-white border border-[#c3c4c7] rounded shadow-xs overflow-hidden">
+                    <div className="px-5 py-3.5 border-b border-[#e5e5e5] bg-stone-50 font-serif font-bold text-stone-900 text-sm flex items-center justify-between">
+                      <span>At a Glance</span>
+                      <span className="text-[11px] text-stone-500 font-sans font-normal">
+                        WordPress Content Summary
+                      </span>
+                    </div>
+                    <div className="p-5 grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
+                      <div className="flex items-center gap-2.5">
+                        <FileText className="w-4 h-4 text-[#2271b1]" />
+                        <div>
+                          <div className="font-bold text-base text-stone-900 tabular-nums">
+                            {announcements.length}
+                          </div>
+                          <div className="text-stone-500 text-[11px]">Published Posts</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2.5">
+                        <Globe className="w-4 h-4 text-emerald-600" />
+                        <div>
+                          <div className="font-bold text-base text-stone-900 tabular-nums">
+                            {localSettings.academicDivisions?.length || 3}
+                          </div>
+                          <div className="text-stone-500 text-[11px]">Academic Divisions</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2.5">
+                        <Calendar className="w-4 h-4 text-amber-600" />
+                        <div>
+                          <div className="font-bold text-base text-stone-900 tabular-nums">
+                            {events.length}
+                          </div>
+                          <div className="text-stone-500 text-[11px]">Calendar Events</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2.5">
+                        <Users className="w-4 h-4 text-indigo-600" />
+                        <div>
+                          <div className="font-bold text-base text-stone-900 tabular-nums">
+                            {facultyList.length}
+                          </div>
+                          <div className="text-stone-500 text-[11px]">Faculty Fellows</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2.5">
+                        <Inbox className="w-4 h-4 text-rose-600" />
+                        <div>
+                          <div className="font-bold text-base text-stone-900 tabular-nums">
+                            {inquiries.length}
+                          </div>
+                          <div className="text-stone-500 text-[11px]">Admissions Forms</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2.5">
+                        <ImageIcon className="w-4 h-4 text-purple-600" />
+                        <div>
+                          <div className="font-bold text-base text-stone-900 tabular-nums">
+                            {mediaLibraryItems.length}
+                          </div>
+                          <div className="text-stone-500 text-[11px]">Media Assets</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="px-5 py-2.5 bg-stone-50 border-t border-[#e5e5e5] text-[11px] text-stone-500 flex items-center justify-between">
+                      <span>WordPress 6.7 running St. Andrew's Theme</span>
+                      <span className="text-emerald-700 font-medium">Site Health: Excellent</span>
+                    </div>
+                  </div>
+
+                  {/* Activity & Recent Published Announcements */}
+                  <div className="bg-white border border-[#c3c4c7] rounded shadow-xs overflow-hidden">
+                    <div className="px-5 py-3.5 border-b border-[#e5e5e5] bg-stone-50 font-serif font-bold text-stone-900 text-sm flex items-center justify-between">
+                      <span>Recent Activity & Published Posts</span>
+                      <button
+                        onClick={() => setActiveMenu('posts')}
+                        className="text-xs text-[#2271b1] hover:underline"
+                      >
+                        View All
+                      </button>
+                    </div>
+                    <div className="divide-y divide-stone-100">
+                      {announcements.slice(0, 4).map(ann => (
+                        <div key={ann.id} className="p-4 flex items-start justify-between gap-3 hover:bg-stone-50">
+                          <div>
+                            <div className="flex items-center gap-2 text-[11px] text-stone-500 mb-1">
+                              <span>{ann.date}</span>
+                              <span aria-hidden="true">·</span>
+                              <span className="font-semibold text-stone-700">{ann.category}</span>
+                              {ann.urgent && (
+                                <span className="text-red-700 font-bold bg-red-50 px-1 rounded text-[10px]">
+                                  Alert
+                                </span>
+                              )}
+                            </div>
+                            <h4 className="font-serif font-bold text-stone-900 text-xs sm:text-sm">
+                              {ann.title}
+                            </h4>
+                            <p className="text-xs text-stone-600 line-clamp-1 mt-0.5">{ann.content}</p>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              onClick={() => handleEditPost(ann)}
+                              className="p-1 text-stone-500 hover:text-[#2271b1]"
+                              title="Edit post"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                onDeleteAnnouncement(ann.id);
+                                triggerNotice('Post moved to Trash.');
+                              }}
+                              className="p-1 text-stone-400 hover:text-red-600"
+                              title="Delete post"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right 5 Columns: WordPress Quick Draft Widget + Site Health */}
+                <div className="lg:col-span-5 space-y-6">
+                  {/* Quick Draft Widget */}
+                  <div className="bg-white border border-[#c3c4c7] rounded shadow-xs p-5 space-y-4">
+                    <div className="border-b border-stone-200 pb-3">
+                      <h3 className="font-serif font-bold text-stone-900 text-sm">Quick Draft</h3>
+                      <p className="text-stone-500 text-xs mt-0.5">
+                        Jot down an announcement or event draft to publish immediately.
+                      </p>
+                    </div>
+
+                    <form onSubmit={handleSaveQuickDraft} className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-stone-700 mb-1">Title</label>
+                        <input
+                          type="text"
+                          value={quickDraftTitle}
+                          onChange={e => setQuickDraftTitle(e.target.value)}
+                          placeholder="e.g., Extended Library Hours for Midterms"
+                          className="w-full text-xs px-3 py-2 border border-stone-300 rounded focus:border-[#2271b1] focus:ring-1 focus:ring-[#2271b1] outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-stone-700 mb-1">What's on your mind?</label>
+                        <textarea
+                          rows={3}
+                          value={quickDraftContent}
+                          onChange={e => setQuickDraftContent(e.target.value)}
+                          placeholder="Draft message body..."
+                          className="w-full text-xs px-3 py-2 border border-stone-300 rounded focus:border-[#2271b1] focus:ring-1 focus:ring-[#2271b1] outline-none"
+                        />
+                      </div>
+                      <div className="flex justify-between items-center pt-1">
+                        <span className="text-[10px] text-stone-400">Publishes live to community</span>
+                        <button
+                          type="submit"
+                          className="px-3.5 py-1.5 bg-stone-900 hover:bg-stone-800 text-white rounded text-xs font-medium transition-colors cursor-pointer"
+                        >
+                          Save Draft
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
+                  {/* WordPress Customizer Quick Link Card */}
+                  <div className="bg-white border border-[#c3c4c7] rounded shadow-xs p-5 space-y-3">
+                    <h3 className="font-serif font-bold text-stone-900 text-sm flex items-center gap-2">
+                      <Palette className="w-4 h-4 text-amber-600" />
+                      <span>Customize Your Site</span>
+                    </h3>
+                    <p className="text-xs text-stone-600 leading-relaxed">
+                      Change your school name, hero headline, colors, academic divisions, or Headmaster address with instant live preview.
+                    </p>
+                    <div className="pt-1 flex flex-col gap-2">
+                      <button
+                        onClick={() => setActiveMenu('site-editor')}
+                        className="w-full py-2 bg-[#2271b1] hover:bg-[#135e96] text-white text-xs font-semibold rounded text-center transition-colors cursor-pointer shadow-xs"
+                      >
+                        Open Site & Page Builder
+                      </button>
+                      <button
+                        onClick={() => setActiveMenu('appearance')}
+                        className="w-full py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-300 text-xs font-medium rounded text-center transition-colors cursor-pointer"
+                      >
+                        Change Theme Colors & Accents
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB 2: SITE & PAGE EDITOR (Gutenberg-Style Builder)      */}
+          {/* ======================================================== */}
+          {activeMenu === 'site-editor' && (
+            <div className="space-y-6">
+              {/* Header with Save / Publish button */}
+              <div className="bg-white border border-[#c3c4c7] p-5 rounded shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-emerald-700 mb-1">
+                    <Globe className="w-4 h-4" />
+                    <span>Visual Site Builder</span>
+                  </div>
+                  <h1 className="text-xl sm:text-2xl font-serif font-bold text-stone-950">
+                    Edit Pages & Homepage Sections
+                  </h1>
+                  <p className="text-xs text-stone-600 mt-0.5">
+                    Modify any text block, hero slogan, curriculum division, or Head of School letter. Changes save instantly.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => setIsLiveCustomizerOpen(true)}
+                    className="px-3.5 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-300 rounded text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Preview</span>
+                  </button>
+                  <button
+                    onClick={handleSaveSettings}
+                    className="px-5 py-2 bg-[#2271b1] hover:bg-[#135e96] text-white rounded text-xs font-bold shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>Publish Changes</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Sub-tabs for Section Navigation */}
+              <div className="flex border-b border-stone-300 bg-white px-4 rounded-t gap-2 overflow-x-auto">
+                {[
+                  { id: 'hero', label: 'Hero & Headlines' },
+                  { id: 'divisions', label: 'Academic Divisions' },
+                  { id: 'welcome', label: 'Head of School Address' },
+                  { id: 'stats', label: 'Key Performance Stats' },
+                  { id: 'ribbon', label: 'Top Banner Ribbon' },
+                  { id: 'footer', label: 'Footer & Legal Notice' }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setEditorSubTab(tab.id as any)}
+                    className={`py-3 px-3 text-xs font-semibold whitespace-nowrap border-b-2 transition-colors cursor-pointer ${
+                      editorSubTab === tab.id
+                        ? 'border-[#2271b1] text-[#2271b1]'
+                        : 'border-transparent text-stone-600 hover:text-stone-900'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* SECTION SUB-TAB CONTENT */}
+              <div className="bg-white border border-[#c3c4c7] border-t-0 p-6 rounded-b shadow-xs space-y-6">
+                {/* 1. Hero Section Editing */}
+                {editorSubTab === 'hero' && (
+                  <div className="space-y-6 max-w-3xl">
+                    <div>
+                      <h3 className="font-serif font-bold text-stone-900 text-base">Hero Section & Call-to-Actions</h3>
+                      <p className="text-xs text-stone-500 mt-0.5">
+                        The primary banner viewed when visitors and parents arrive at the school portal.
+                      </p>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-stone-800 mb-1.5">
+                          School Name / Institution Brand
+                        </label>
+                        <input
+                          type="text"
+                          value={localSettings.schoolName}
+                          onChange={e => setLocalSettings({ ...localSettings, schoolName: e.target.value })}
+                          className="w-full text-sm font-serif font-bold px-3 py-2 border border-stone-300 rounded focus:border-[#2271b1] focus:ring-1 focus:ring-[#2271b1] outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-stone-800 mb-1.5">
+                          Latin Motto & Translation
+                        </label>
+                        <input
+                          type="text"
+                          value={localSettings.motto}
+                          onChange={e => setLocalSettings({ ...localSettings, motto: e.target.value })}
+                          className="w-full text-xs px-3 py-2 border border-stone-300 rounded focus:border-[#2271b1] focus:ring-1 focus:ring-[#2271b1] outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-stone-800 mb-1.5">
+                          Main Hero Headline
+                        </label>
+                        <input
+                          type="text"
+                          value={localSettings.heroHeadline}
+                          onChange={e => setLocalSettings({ ...localSettings, heroHeadline: e.target.value })}
+                          className="w-full text-sm font-serif font-bold px-3 py-2 border border-stone-300 rounded focus:border-[#2271b1] focus:ring-1 focus:ring-[#2271b1] outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-stone-800 mb-1.5">
+                          Hero Subtitle / Mission Prose
+                        </label>
+                        <textarea
+                          rows={4}
+                          value={localSettings.heroSubtitle}
+                          onChange={e => setLocalSettings({ ...localSettings, heroSubtitle: e.target.value })}
+                          className="w-full text-xs px-3 py-2 border border-stone-300 rounded focus:border-[#2271b1] focus:ring-1 focus:ring-[#2271b1] outline-none leading-relaxed"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-stone-800 mb-1.5">
+                            Primary CTA Button Label
+                          </label>
+                          <input
+                            type="text"
+                            value={localSettings.heroCtaPrimary || 'Explore Academic Curriculum'}
+                            onChange={e => setLocalSettings({ ...localSettings, heroCtaPrimary: e.target.value })}
+                            className="w-full text-xs px-3 py-2 border border-stone-300 rounded focus:border-[#2271b1] focus:ring-1 focus:ring-[#2271b1] outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-stone-800 mb-1.5">
+                            Secondary CTA Button Label
+                          </label>
+                          <input
+                            type="text"
+                            value={localSettings.heroCtaSecondary || 'Admissions & Tuition'}
+                            onChange={e => setLocalSettings({ ...localSettings, heroCtaSecondary: e.target.value })}
+                            className="w-full text-xs px-3 py-2 border border-stone-300 rounded focus:border-[#2271b1] focus:ring-1 focus:ring-[#2271b1] outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. Academic Divisions Editing */}
+                {editorSubTab === 'divisions' && (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-serif font-bold text-stone-900 text-base">Academic Divisions</h3>
+                        <p className="text-xs text-stone-500 mt-0.5">
+                          Configure Lower School, Middle School, and Upper School curriculum descriptions and highlights.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      {(localSettings.academicDivisions || []).map((division, idx) => (
+                        <div key={division.id || idx} className="p-4 bg-stone-50 rounded border border-stone-200 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-xs uppercase tracking-wider text-amber-800">
+                              Division {idx + 1}
+                            </span>
+                            <button
+                              onClick={() => {
+                                const updated = (localSettings.academicDivisions || []).filter((_, i) => i !== idx);
+                                setLocalSettings({ ...localSettings, academicDivisions: updated });
+                              }}
+                              className="text-xs text-red-600 hover:underline flex items-center gap-1"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Remove</span>
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-[11px] font-semibold text-stone-700 mb-1">Division Name</label>
+                              <input
+                                type="text"
+                                value={division.name}
+                                onChange={e => {
+                                  const updated = [...(localSettings.academicDivisions || [])];
+                                  updated[idx].name = e.target.value;
+                                  setLocalSettings({ ...localSettings, academicDivisions: updated });
+                                }}
+                                className="w-full text-xs px-2.5 py-1.5 border border-stone-300 rounded bg-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-semibold text-stone-700 mb-1">Subtitle / Ethos</label>
+                              <input
+                                type="text"
+                                value={division.subtitle}
+                                onChange={e => {
+                                  const updated = [...(localSettings.academicDivisions || [])];
+                                  updated[idx].subtitle = e.target.value;
+                                  setLocalSettings({ ...localSettings, academicDivisions: updated });
+                                }}
+                                className="w-full text-xs px-2.5 py-1.5 border border-stone-300 rounded bg-white"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-semibold text-stone-700 mb-1">Description</label>
+                            <textarea
+                              rows={2}
+                              value={division.description}
+                              onChange={e => {
+                                const updated = [...(localSettings.academicDivisions || [])];
+                                updated[idx].description = e.target.value;
+                                setLocalSettings({ ...localSettings, academicDivisions: updated });
+                              }}
+                              className="w-full text-xs px-2.5 py-1.5 border border-stone-300 rounded bg-white"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-semibold text-stone-700 mb-1">
+                              Key Highlights (comma-separated)
+                            </label>
+                            <input
+                              type="text"
+                              value={division.highlights.join(', ')}
+                              onChange={e => {
+                                const updated = [...(localSettings.academicDivisions || [])];
+                                updated[idx].highlights = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                                setLocalSettings({ ...localSettings, academicDivisions: updated });
+                              }}
+                              className="w-full text-xs px-2.5 py-1.5 border border-stone-300 rounded bg-white"
+                            />
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Add new division */}
+                      <button
+                        onClick={() => {
+                          const newDiv: AcademicDivision = {
+                            id: `div-${Date.now()}`,
+                            name: 'Post-Graduate & Advanced Studies',
+                            subtitle: 'Fellowship & Pre-Collegiate Honors',
+                            description: 'Independent research fellowships in biophysics, constitutional law, and algorithmic engineering.',
+                            highlights: ['Faculty-mentored thesis', 'National competition sponsorship', 'University laboratory access']
+                          };
+                          setLocalSettings({
+                            ...localSettings,
+                            academicDivisions: [...(localSettings.academicDivisions || []), newDiv]
+                          });
+                          triggerNotice('New Academic Division added.');
+                        }}
+                        className="py-2 px-3 border border-dashed border-stone-400 text-stone-700 hover:border-[#2271b1] hover:text-[#2271b1] rounded text-xs font-semibold flex items-center justify-center gap-1.5 w-full transition-colors cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add New Academic Division</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. Head of School Welcome Letter */}
+                {editorSubTab === 'welcome' && (
+                  <div className="space-y-6 max-w-3xl">
+                    <div>
+                      <h3 className="font-serif font-bold text-stone-900 text-base">Head of School Welcome Address</h3>
+                      <p className="text-xs text-stone-500 mt-0.5">
+                        The leadership letter and portrait displayed on the school landing and public pages.
+                      </p>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-stone-800 mb-1.5">
+                            Head of School Name & Degrees
+                          </label>
+                          <input
+                            type="text"
+                            value={localSettings.headOfSchoolName || ''}
+                            onChange={e => setLocalSettings({ ...localSettings, headOfSchoolName: e.target.value })}
+                            className="w-full text-xs px-3 py-2 border border-stone-300 rounded focus:border-[#2271b1] focus:ring-1 focus:ring-[#2271b1] outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-stone-800 mb-1.5">
+                            Academic Title & Tenure
+                          </label>
+                          <input
+                            type="text"
+                            value={localSettings.headOfSchoolTitle || ''}
+                            onChange={e => setLocalSettings({ ...localSettings, headOfSchoolTitle: e.target.value })}
+                            className="w-full text-xs px-3 py-2 border border-stone-300 rounded focus:border-[#2271b1] focus:ring-1 focus:ring-[#2271b1] outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-stone-800 mb-1.5">
+                          Guiding Quote / Banner Motto
+                        </label>
+                        <input
+                          type="text"
+                          value={localSettings.headOfSchoolQuote || ''}
+                          onChange={e => setLocalSettings({ ...localSettings, headOfSchoolQuote: e.target.value })}
+                          className="w-full text-xs px-3 py-2 border border-stone-300 rounded focus:border-[#2271b1] focus:ring-1 focus:ring-[#2271b1] outline-none italic"
+                        />
+                      </div>
+
+                      {/* Gutenberg Block Editor Style for Letter */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="text-xs font-bold text-stone-800">
+                            Welcome Letter Body (Rich Editorial)
+                          </label>
+                          <div className="flex items-center gap-1 bg-stone-100 p-0.5 rounded border border-stone-200 text-stone-600">
+                            <span className="p-1 hover:text-stone-900 cursor-pointer" title="Bold">
+                              <Bold className="w-3.5 h-3.5" />
+                            </span>
+                            <span className="p-1 hover:text-stone-900 cursor-pointer" title="Italic">
+                              <Italic className="w-3.5 h-3.5" />
+                            </span>
+                            <span className="p-1 hover:text-stone-900 cursor-pointer" title="Quote block">
+                              <Quote className="w-3.5 h-3.5" />
+                            </span>
+                          </div>
+                        </div>
+                        <textarea
+                          rows={6}
+                          value={localSettings.headOfSchoolLetter || ''}
+                          onChange={e => setLocalSettings({ ...localSettings, headOfSchoolLetter: e.target.value })}
+                          className="w-full text-xs px-3 py-2.5 border border-stone-300 rounded focus:border-[#2271b1] focus:ring-1 focus:ring-[#2271b1] outline-none leading-relaxed font-serif"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 4. Key Performance Stats */}
+                {editorSubTab === 'stats' && (
+                  <div className="space-y-6 max-w-3xl">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-serif font-bold text-stone-900 text-base">Key Performance Indicators</h3>
+                        <p className="text-xs text-stone-500 mt-0.5">
+                          The 4 highlighted numerical metrics featured on the public homepage and dashboard.
+                        </p>
+                      </div>
+                      <button
+                        onClick={handleSaveStats}
+                        className="px-3.5 py-1.5 bg-[#2271b1] hover:bg-[#135e96] text-white text-xs font-semibold rounded transition-colors cursor-pointer"
+                      >
+                        Save Metrics
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {localStats.map((stat, idx) => (
+                        <div key={idx} className="p-4 bg-stone-50 border border-stone-200 rounded space-y-2">
+                          <label className="block text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
+                            Metric {idx + 1}
+                          </label>
+                          <input
+                            type="text"
+                            value={stat.label}
+                            onChange={e => {
+                              const updated = [...localStats];
+                              updated[idx].label = e.target.value;
+                              setLocalStats(updated);
+                            }}
+                            className="w-full text-xs font-bold px-2.5 py-1.5 border border-stone-300 rounded bg-white"
+                            placeholder="Metric Label"
+                          />
+                          <input
+                            type="text"
+                            value={stat.value}
+                            onChange={e => {
+                              const updated = [...localStats];
+                              updated[idx].value = e.target.value;
+                              setLocalStats(updated);
+                            }}
+                            className="w-full text-base font-serif font-bold text-[#2271b1] px-2.5 py-1.5 border border-stone-300 rounded bg-white tabular-nums"
+                            placeholder="e.g. 100% or 8:1"
+                          />
+                          <input
+                            type="text"
+                            value={stat.detail}
+                            onChange={e => {
+                              const updated = [...localStats];
+                              updated[idx].detail = e.target.value;
+                              setLocalStats(updated);
+                            }}
+                            className="w-full text-xs text-stone-600 px-2.5 py-1.5 border border-stone-300 rounded bg-white"
+                            placeholder="Context detail"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 5. Top Ribbon Alert */}
+                {editorSubTab === 'ribbon' && (
+                  <div className="space-y-6 max-w-3xl">
+                    <div>
+                      <h3 className="font-serif font-bold text-stone-900 text-base">Top Ribbon Alert Banner</h3>
+                      <p className="text-xs text-stone-500 mt-0.5">
+                        The urgent ticker notice positioned at the very summit of the website.
+                      </p>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-stone-800 mb-1.5">
+                          Ribbon Notice Text
+                        </label>
+                        <input
+                          type="text"
+                          value={localSettings.topRibbonAlert}
+                          onChange={e => setLocalSettings({ ...localSettings, topRibbonAlert: e.target.value })}
+                          className="w-full text-xs px-3 py-2 border border-stone-300 rounded focus:border-[#2271b1] focus:ring-1 focus:ring-[#2271b1] outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-stone-800 mb-1.5">
+                          Action Link Text
+                        </label>
+                        <input
+                          type="text"
+                          value={localSettings.topRibbonLinkText || 'View Details'}
+                          onChange={e => setLocalSettings({ ...localSettings, topRibbonLinkText: e.target.value })}
+                          className="w-full text-xs px-3 py-2 border border-stone-300 rounded focus:border-[#2271b1] focus:ring-1 focus:ring-[#2271b1] outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 6. Footer & Legal */}
+                {editorSubTab === 'footer' && (
+                  <div className="space-y-6 max-w-3xl">
+                    <div>
+                      <h3 className="font-serif font-bold text-stone-900 text-base">Footer Notice & Non-Discrimination Policy</h3>
+                      <p className="text-xs text-stone-500 mt-0.5">
+                        Legal compliance statement and accreditation summary rendered in the site footer.
+                      </p>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-stone-800 mb-1.5">
+                          Accreditation Seal Text
+                        </label>
+                        <input
+                          type="text"
+                          value={localSettings.accreditationText}
+                          onChange={e => setLocalSettings({ ...localSettings, accreditationText: e.target.value })}
+                          className="w-full text-xs px-3 py-2 border border-stone-300 rounded focus:border-[#2271b1] focus:ring-1 focus:ring-[#2271b1] outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-stone-800 mb-1.5">
+                          Non-Discrimination & Equal Opportunity Notice
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={localSettings.footerNotice || ''}
+                          onChange={e => setLocalSettings({ ...localSettings, footerNotice: e.target.value })}
+                          className="w-full text-xs px-3 py-2 border border-stone-300 rounded focus:border-[#2271b1] focus:ring-1 focus:ring-[#2271b1] outline-none leading-relaxed"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-4 border-t border-stone-200 flex justify-end">
+                  <button
+                    onClick={handleSaveSettings}
+                    className="px-6 py-2.5 bg-[#2271b1] hover:bg-[#135e96] text-white rounded text-xs font-bold shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>Publish Changes to Live Site</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB 3: POSTS & ANNOUNCEMENTS (WordPress Post Table)      */}
+          {/* ======================================================== */}
+          {activeMenu === 'posts' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl font-serif font-bold text-stone-900 flex items-center gap-2">
+                    <span>Posts & Announcements</span>
+                    <button
+                      onClick={handleOpenAddPost}
+                      className="px-2.5 py-1 text-xs font-sans font-medium text-[#2271b1] hover:bg-[#2271b1] hover:text-white border border-[#2271b1] rounded transition-colors"
+                    >
+                      Add New Post
+                    </button>
+                  </h1>
+                  <p className="text-xs text-stone-500 mt-0.5">
+                    Manage student body notices, faculty alerts, and academic commendations.
+                  </p>
+                </div>
+              </div>
+
+              {/* WordPress Standard Post List Table */}
+              <div className="bg-white border border-[#c3c4c7] rounded shadow-xs overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-stone-50 border-b border-[#c3c4c7] font-semibold text-stone-700">
+                        <th className="py-2.5 px-4 w-12 text-center">
+                          <input type="checkbox" className="rounded text-[#2271b1]" readOnly />
+                        </th>
+                        <th className="py-2.5 px-4">Title</th>
+                        <th className="py-2.5 px-4">Author</th>
+                        <th className="py-2.5 px-4">Categories</th>
+                        <th className="py-2.5 px-4">Priority</th>
+                        <th className="py-2.5 px-4">Date</th>
+                        <th className="py-2.5 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#e5e5e5]">
+                      {announcements.map(post => (
+                        <tr key={post.id} className="hover:bg-stone-50 transition-colors group">
+                          <td className="py-3 px-4 text-center">
+                            <input type="checkbox" className="rounded text-[#2271b1]" readOnly />
+                          </td>
+                          <td className="py-3 px-4 font-medium text-stone-900">
+                            <button
+                              onClick={() => handleEditPost(post)}
+                              className="font-serif font-bold text-stone-900 hover:text-[#2271b1] text-left cursor-pointer"
+                            >
+                              {post.title}
+                            </button>
+                            <div className="text-[11px] text-stone-500 line-clamp-1 mt-0.5">{post.content}</div>
+                          </td>
+                          <td className="py-3 px-4 text-stone-600">{post.author}</td>
+                          <td className="py-3 px-4">
+                            <span className="text-stone-700 font-medium">{post.category}</span>
+                          </td>
+                          <td className="py-3 px-4">
+                            {post.urgent ? (
+                              <span className="text-red-700 font-bold bg-red-50 px-1.5 py-0.5 rounded text-[10px]">
+                                Urgent Alert
+                              </span>
+                            ) : (
+                              <span className="text-stone-500 text-[11px]">Normal</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-stone-500 font-mono text-[11px]">{post.date}</td>
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => handleEditPost(post)}
+                                className="text-[#2271b1] hover:underline font-medium text-[11px]"
+                              >
+                                Edit
+                              </button>
+                              <span className="text-stone-300">|</span>
+                              <button
+                                onClick={() => {
+                                  onDeleteAnnouncement(post.id);
+                                  triggerNotice(`Post "${post.title}" deleted.`);
+                                }}
+                                className="text-red-600 hover:underline font-medium text-[11px]"
+                              >
+                                Trash
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="px-4 py-3 bg-stone-50 border-t border-[#c3c4c7] text-xs text-stone-500 flex items-center justify-between">
+                  <span>{announcements.length} items</span>
+                  <span>Published publicly to School Community</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB 4: MASTER CALENDAR & EVENTS                          */}
+          {/* ======================================================== */}
+          {activeMenu === 'events' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl font-serif font-bold text-stone-900 flex items-center gap-2">
+                    <span>Events & Term Calendar</span>
+                    <button
+                      onClick={() => setIsAddEventOpen(true)}
+                      className="px-2.5 py-1 text-xs font-sans font-medium text-[#2271b1] hover:bg-[#2271b1] hover:text-white border border-[#2271b1] rounded transition-colors"
+                    >
+                      Add Event
+                    </button>
+                  </h1>
+                  <p className="text-xs text-stone-500 mt-0.5">
+                    Schedule convocations, symposiums, athletic tournaments, and arts performances.
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-white border border-[#c3c4c7] rounded shadow-xs overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-stone-50 border-b border-[#c3c4c7] font-semibold text-stone-700">
+                        <th className="py-2.5 px-4">Event Title</th>
+                        <th className="py-2.5 px-4">Category</th>
+                        <th className="py-2.5 px-4">Date & Time</th>
+                        <th className="py-2.5 px-4">Venue & Hall</th>
+                        <th className="py-2.5 px-4">RSVP Count</th>
+                        <th className="py-2.5 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#e5e5e5]">
+                      {events.map(evt => (
+                        <tr key={evt.id} className="hover:bg-stone-50 transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="font-serif font-bold text-stone-900">{evt.title}</div>
+                            <div className="text-[11px] text-stone-500 line-clamp-1">{evt.description}</div>
+                          </td>
+                          <td className="py-3 px-4 capitalize text-stone-700">{evt.category}</td>
+                          <td className="py-3 px-4">
+                            <div className="font-mono text-stone-800">{evt.date}</div>
+                            <div className="text-[11px] text-stone-500">{evt.time}</div>
+                          </td>
+                          <td className="py-3 px-4 text-stone-600">{evt.location}</td>
+                          <td className="py-3 px-4 font-mono font-bold text-stone-800 tabular-nums">
+                            {evt.rsvpCount} scholars
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <button
+                              onClick={() => {
+                                onDeleteEvent(evt.id);
+                                triggerNotice(`Event "${evt.title}" removed.`);
+                              }}
+                              className="text-red-600 hover:underline font-medium text-[11px]"
+                            >
+                              Cancel Event
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB 5: TEACHERS & FACULTY                                */}
+          {/* ======================================================== */}
+          {activeMenu === 'faculty' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl font-serif font-bold text-stone-900 flex items-center gap-2">
+                    <span>Faculty Directory & Staff</span>
+                    <button
+                      onClick={() => setIsAddFacultyOpen(true)}
+                      className="px-2.5 py-1 text-xs font-sans font-medium text-[#2271b1] hover:bg-[#2271b1] hover:text-white border border-[#2271b1] rounded transition-colors"
+                    >
+                      Add Faculty
+                    </button>
+                  </h1>
+                  <p className="text-xs text-stone-500 mt-0.5">
+                    Department chairs, fellows, seminar instructors, and office hours.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {facultyList.map(fac => (
+                  <div key={fac.id} className="bg-white border border-[#c3c4c7] p-4 rounded shadow-xs space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full ${fac.avatarColor} text-white flex items-center justify-center font-serif font-bold text-sm shadow-xs`}>
+                          {fac.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                        </div>
+                        <div>
+                          <h4 className="font-serif font-bold text-stone-900 text-sm">{fac.name}</h4>
+                          <div className="text-[11px] text-stone-600">{fac.title}</div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          onDeleteFaculty(fac.id);
+                          triggerNotice(`Faculty profile for ${fac.name} deleted.`);
+                        }}
+                        className="text-stone-400 hover:text-red-600 p-1"
+                        title="Remove faculty"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="text-xs text-stone-600 space-y-1 pt-1 border-t border-stone-100">
+                      <div>
+                        <span className="font-semibold text-stone-700">Department:</span> {fac.department}
+                      </div>
+                      <div>
+                        <span className="font-semibold text-stone-700">Office:</span> {fac.officeRoom}
+                      </div>
+                      <div>
+                        <span className="font-semibold text-stone-700">Email:</span> {fac.email}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB 6: MEDIA LIBRARY (Images & Badges)                    */}
+          {/* ======================================================== */}
+          {activeMenu === 'media' && (
+            <div className="space-y-6">
+              <div>
+                <h1 className="text-2xl font-serif font-bold text-stone-900">Media Library</h1>
+                <p className="text-xs text-stone-500 mt-0.5">
+                  High-fidelity campus photographs, student ID card mockups, and institutional badges bundled with the system.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {mediaLibraryItems.map((item, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => setSelectedMedia(item.url)}
+                    className={`bg-white border rounded overflow-hidden shadow-xs cursor-pointer group transition-all ${
+                      selectedMedia === item.url ? 'ring-2 ring-[#2271b1] border-transparent' : 'border-[#c3c4c7] hover:border-stone-400'
+                    }`}
+                  >
+                    <div className="aspect-4/3 bg-stone-100 overflow-hidden relative">
+                      <img
+                        src={item.url}
+                        alt={item.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+                    <div className="p-3">
+                      <div className="font-serif font-bold text-stone-900 text-xs truncate">{item.title}</div>
+                      <div className="flex items-center justify-between text-[10px] text-stone-500 mt-1">
+                        <span>{item.category}</span>
+                        <span className="font-mono">{item.size}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {selectedMedia && (
+                <div className="bg-stone-900 text-white p-4 rounded-lg flex items-center justify-between gap-4 text-xs">
+                  <div className="truncate">
+                    <span className="font-semibold text-amber-300">Selected Asset Path:</span>{' '}
+                    <code className="text-stone-300 font-mono text-[11px]">{selectedMedia}</code>
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard?.writeText(selectedMedia);
+                      triggerNotice('Media URL copied to clipboard.');
+                    }}
+                    className="px-3 py-1 bg-amber-400 hover:bg-amber-300 text-stone-950 rounded font-semibold text-xs shrink-0 cursor-pointer"
+                  >
+                    Copy Asset Path
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB 7: ADMISSIONS FORMS & INQUIRIES                      */}
+          {/* ======================================================== */}
+          {activeMenu === 'forms' && (
+            <div className="space-y-6">
+              <div>
+                <h1 className="text-2xl font-serif font-bold text-stone-900">Admissions Inquiries & Forms</h1>
+                <p className="text-xs text-stone-500 mt-0.5">
+                  Prospective student inquiries, family admissions requests, and tour bookings.
+                </p>
+              </div>
+
+              <div className="bg-white border border-[#c3c4c7] rounded shadow-xs overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-stone-50 border-b border-[#c3c4c7] font-semibold text-stone-700">
+                        <th className="py-2.5 px-4">Applicant</th>
+                        <th className="py-2.5 px-4">Grade Level</th>
+                        <th className="py-2.5 px-4">Parent / Contact</th>
+                        <th className="py-2.5 px-4">Inquiry Notes</th>
+                        <th className="py-2.5 px-4">Status</th>
+                        <th className="py-2.5 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#e5e5e5]">
+                      {inquiries.map(inq => (
+                        <tr key={inq.id} className="hover:bg-stone-50 transition-colors">
+                          <td className="py-3 px-4 font-serif font-bold text-stone-900">{inq.applicantName}</td>
+                          <td className="py-3 px-4 text-stone-700">{inq.gradeLevel}</td>
+                          <td className="py-3 px-4">
+                            <div className="font-medium text-stone-800">{inq.parentName}</div>
+                            <div className="text-[11px] text-stone-500">{inq.parentEmail}</div>
+                          </td>
+                          <td className="py-3 px-4 text-stone-600 max-w-xs">{inq.inquiryNotes}</td>
+                          <td className="py-3 px-4">
+                            <select
+                              value={inq.status}
+                              onChange={e => onUpdateInquiryStatus(inq.id, e.target.value as any)}
+                              className="text-[11px] font-semibold px-2 py-1 rounded border border-stone-300 bg-white"
+                            >
+                              <option value="new">New Inquiry</option>
+                              <option value="contacted">Contacted</option>
+                              <option value="tour-scheduled">Tour Scheduled</option>
+                              <option value="archived">Archived</option>
+                            </select>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <button
+                              onClick={() => {
+                                onDeleteInquiry(inq.id);
+                                triggerNotice('Inquiry removed.');
+                              }}
+                              className="text-red-600 hover:underline text-[11px] font-medium"
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB 8: APPEARANCE & THEMES                               */}
+          {/* ======================================================== */}
+          {activeMenu === 'appearance' && (
+            <div className="space-y-6 max-w-3xl">
+              <div>
+                <h1 className="text-2xl font-serif font-bold text-stone-900">Appearance & Theme Settings</h1>
+                <p className="text-xs text-stone-500 mt-0.5">
+                  Select color accents and theme palettes for St. Andrew's Academy portal.
+                </p>
+              </div>
+
+              <div className="bg-white border border-[#c3c4c7] p-6 rounded shadow-xs space-y-6">
+                <div>
+                  <label className="block text-xs font-bold text-stone-800 mb-2">
+                    Primary School Accent Palette
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                    {[
+                      { id: 'amber', name: 'Classic Gold & Navy', color: 'bg-amber-600' },
+                      { id: 'emerald', name: 'Forest Ivy', color: 'bg-emerald-700' },
+                      { id: 'blue', name: 'Collegiate Blue', color: 'bg-blue-700' },
+                      { id: 'indigo', name: 'Oxford Indigo', color: 'bg-indigo-800' },
+                      { id: 'rose', name: 'Crimson Fellowship', color: 'bg-rose-800' }
+                    ].map(theme => (
+                      <button
+                        key={theme.id}
+                        onClick={() => {
+                          setLocalSettings({ ...localSettings, themeAccent: theme.id as any });
+                          triggerNotice(`Accent theme changed to ${theme.name}.`);
+                        }}
+                        className={`p-3 rounded border text-left flex flex-col items-center gap-2 transition-all cursor-pointer ${
+                          localSettings.themeAccent === theme.id
+                            ? 'border-[#2271b1] ring-2 ring-[#2271b1] bg-stone-50'
+                            : 'border-stone-200 hover:border-stone-300'
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-full ${theme.color} shadow-xs`} />
+                        <span className="text-[11px] font-semibold text-center text-stone-800">{theme.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-stone-200 flex justify-end">
+                  <button
+                    onClick={handleSaveSettings}
+                    className="px-5 py-2 bg-[#2271b1] hover:bg-[#135e96] text-white rounded text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                  >
+                    Save Appearance Changes
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB 9: GENERAL SETTINGS                                  */}
+          {/* ======================================================== */}
+          {activeMenu === 'settings' && (
+            <div className="space-y-6 max-w-3xl">
+              <div>
+                <h1 className="text-2xl font-serif font-bold text-stone-900">WordPress General Settings</h1>
+                <p className="text-xs text-stone-500 mt-0.5">
+                  Core institutional parameters, term schedules, and admissions phone lines.
+                </p>
+              </div>
+
+              {/* Sub-tab navigation */}
+              <div className="flex border-b border-stone-300 gap-4 text-xs font-semibold">
+                <button
+                  onClick={() => setSettingsSubTab('general')}
+                  className={`pb-2 border-b-2 cursor-pointer ${
+                    settingsSubTab === 'general' ? 'border-[#2271b1] text-[#2271b1]' : 'border-transparent text-stone-500'
+                  }`}
+                >
+                  General Identity
+                </button>
+                <button
+                  onClick={() => setSettingsSubTab('contact')}
+                  className={`pb-2 border-b-2 cursor-pointer ${
+                    settingsSubTab === 'contact' ? 'border-[#2271b1] text-[#2271b1]' : 'border-transparent text-stone-500'
+                  }`}
+                >
+                  Contact & Campus Info
+                </button>
+                <button
+                  onClick={() => setSettingsSubTab('academics')}
+                  className={`pb-2 border-b-2 cursor-pointer ${
+                    settingsSubTab === 'academics' ? 'border-[#2271b1] text-[#2271b1]' : 'border-transparent text-stone-500'
+                  }`}
+                >
+                  Term & Admissions
+                </button>
+              </div>
+
+              <div className="bg-white border border-[#c3c4c7] p-6 rounded shadow-xs space-y-4">
+                {settingsSubTab === 'general' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-bold text-stone-800 mb-1">Site Title</label>
+                      <input
+                        type="text"
+                        value={localSettings.schoolName}
+                        onChange={e => setLocalSettings({ ...localSettings, schoolName: e.target.value })}
+                        className="w-full text-xs px-3 py-2 border border-stone-300 rounded"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-stone-800 mb-1">Tagline / Latin Motto</label>
+                      <input
+                        type="text"
+                        value={localSettings.motto}
+                        onChange={e => setLocalSettings({ ...localSettings, motto: e.target.value })}
+                        className="w-full text-xs px-3 py-2 border border-stone-300 rounded"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-stone-800 mb-1">Founded Year</label>
+                      <input
+                        type="number"
+                        value={localSettings.foundedYear}
+                        onChange={e => setLocalSettings({ ...localSettings, foundedYear: parseInt(e.target.value) || 1903 })}
+                        className="w-full text-xs px-3 py-2 border border-stone-300 rounded font-mono"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {settingsSubTab === 'contact' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-bold text-stone-800 mb-1">Campus Physical Address</label>
+                      <input
+                        type="text"
+                        value={localSettings.campusAddress}
+                        onChange={e => setLocalSettings({ ...localSettings, campusAddress: e.target.value })}
+                        className="w-full text-xs px-3 py-2 border border-stone-300 rounded"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-stone-800 mb-1">Main Reception Telephone</label>
+                        <input
+                          type="text"
+                          value={localSettings.phone}
+                          onChange={e => setLocalSettings({ ...localSettings, phone: e.target.value })}
+                          className="w-full text-xs px-3 py-2 border border-stone-300 rounded"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-stone-800 mb-1">Campus Emergency Line</label>
+                        <input
+                          type="text"
+                          value={localSettings.emergencyPhone}
+                          onChange={e => setLocalSettings({ ...localSettings, emergencyPhone: e.target.value })}
+                          className="w-full text-xs px-3 py-2 border border-stone-300 rounded font-mono text-red-600"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-stone-800 mb-1">Campus Visiting Hours</label>
+                      <input
+                        type="text"
+                        value={localSettings.visitingHours}
+                        onChange={e => setLocalSettings({ ...localSettings, visitingHours: e.target.value })}
+                        className="w-full text-xs px-3 py-2 border border-stone-300 rounded"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {settingsSubTab === 'academics' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-bold text-stone-800 mb-1">Current Academic Term</label>
+                      <input
+                        type="text"
+                        value={localSettings.termName}
+                        onChange={e => setLocalSettings({ ...localSettings, termName: e.target.value })}
+                        className="w-full text-xs px-3 py-2 border border-stone-300 rounded"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-stone-800 mb-1">Admissions Priority Deadline</label>
+                      <input
+                        type="text"
+                        value={localSettings.admissionsDeadline}
+                        onChange={e => setLocalSettings({ ...localSettings, admissionsDeadline: e.target.value })}
+                        className="w-full text-xs px-3 py-2 border border-stone-300 rounded"
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div className="pt-4 border-t border-stone-200 flex justify-end">
+                  <button
+                    onClick={handleSaveSettings}
+                    className="px-5 py-2 bg-[#2271b1] hover:bg-[#135e96] text-white rounded text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </main>
       </div>
 
       {/* ======================================================== */}
-      {/* 1. SITE INFO & HERO COPY EDITOR */}
+      {/* 4. LIVE VISUAL CUSTOMIZER MODAL WITH DEVICE SIMULATION    */}
       {/* ======================================================== */}
-      {activeAdminTab === 'general' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Form */}
-          <div className="lg:col-span-8 bg-white rounded-xl border border-stone-200 p-6 sm:p-7 shadow-xs">
-            <h3 className="text-lg font-serif font-bold text-stone-950 pb-2 border-b border-stone-200 mb-6">
-              Academy Identity & Homepage Copy
-            </h3>
+      {isLiveCustomizerOpen && (
+        <div className="fixed inset-0 z-50 bg-stone-950/80 backdrop-blur-xs flex flex-col animate-in fade-in duration-200">
+          {/* Customizer Top Header Bar */}
+          <div className="bg-[#1d2327] text-white h-12 px-4 flex items-center justify-between border-b border-[#2c3338] shrink-0">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setIsLiveCustomizerOpen(false)}
+                className="p-1.5 hover:bg-stone-800 rounded text-stone-300 hover:text-white transition-colors cursor-pointer"
+                title="Close Customizer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="h-4 w-px bg-stone-700" />
+              <div className="text-xs">
+                <span className="font-semibold text-white">Customizing:</span>{' '}
+                <span className="text-amber-300">{localSettings.schoolName} Live Preview</span>
+              </div>
+            </div>
 
-            <form onSubmit={handleSaveGeneralSettings} className="space-y-5 text-xs">
+            {/* Device Switcher (Desktop, Tablet, Mobile) */}
+            <div className="flex items-center gap-1 bg-stone-900 p-1 rounded border border-stone-800">
+              <button
+                onClick={() => setPreviewDevice('desktop')}
+                className={`p-1.5 rounded transition-colors ${
+                  previewDevice === 'desktop' ? 'bg-[#2271b1] text-white' : 'text-stone-400 hover:text-white'
+                }`}
+                title="Desktop View"
+              >
+                <Monitor className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setPreviewDevice('tablet')}
+                className={`p-1.5 rounded transition-colors ${
+                  previewDevice === 'tablet' ? 'bg-[#2271b1] text-white' : 'text-stone-400 hover:text-white'
+                }`}
+                title="Tablet View"
+              >
+                <Tablet className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setPreviewDevice('mobile')}
+                className={`p-1.5 rounded transition-colors ${
+                  previewDevice === 'mobile' ? 'bg-[#2271b1] text-white' : 'text-stone-400 hover:text-white'
+                }`}
+                title="Mobile View"
+              >
+                <Smartphone className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Action */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  handleSaveSettings();
+                  setIsLiveCustomizerOpen(false);
+                }}
+                className="px-4 py-1.5 bg-[#2271b1] hover:bg-[#135e96] text-white rounded text-xs font-bold shadow-xs transition-colors cursor-pointer"
+              >
+                Publish & Close
+              </button>
+            </div>
+          </div>
+
+          {/* Interactive Simulation Container */}
+          <div className="flex-1 overflow-auto bg-stone-900/60 p-4 sm:p-6 flex items-start justify-center">
+            <div
+              className={`bg-white rounded-lg shadow-2xl transition-all duration-300 overflow-hidden border border-stone-300 ${
+                previewDevice === 'desktop'
+                  ? 'w-full max-w-5xl min-h-[600px]'
+                  : previewDevice === 'tablet'
+                  ? 'w-[768px] min-h-[600px]'
+                  : 'w-[375px] min-h-[600px]'
+              }`}
+            >
+              {/* Simulated Browser Bar */}
+              <div className="bg-stone-100 border-b border-stone-200 px-3 py-1.5 flex items-center gap-2 text-[11px] text-stone-500">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                </div>
+                <div className="bg-white border border-stone-200 rounded px-2.5 py-0.5 flex-1 max-w-xs font-mono text-[10px] truncate">
+                  https://standrewsacademy.org/{localSettings.termName.toLowerCase().replace(/\s+/g, '-')}
+                </div>
+              </div>
+
+              {/* Simulated Live School View */}
+              <div className="p-6 space-y-6">
+                {/* Top Banner Ribbon */}
+                <div className="bg-stone-900 text-stone-200 text-xs py-2 px-3 rounded flex items-center justify-between">
+                  <span className="font-semibold text-amber-300">{localSettings.topRibbonAlert}</span>
+                  <span className="underline cursor-pointer">{localSettings.topRibbonLinkText || 'Learn More'}</span>
+                </div>
+
+                {/* Hero Showcase Block */}
+                <div className="space-y-3 py-4 border-b border-stone-200">
+                  <div className="text-xs font-semibold uppercase tracking-widest text-amber-800">
+                    {localSettings.schoolName} · Founded {localSettings.foundedYear}
+                  </div>
+                  <h1 className="text-2xl sm:text-3xl font-serif font-bold text-stone-950 leading-tight">
+                    {localSettings.heroHeadline}
+                  </h1>
+                  <p className="text-xs sm:text-sm text-stone-600 leading-relaxed max-w-2xl">
+                    {localSettings.heroSubtitle}
+                  </p>
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    <button className="px-3.5 py-1.5 bg-stone-950 text-white rounded text-xs font-semibold">
+                      {localSettings.heroCtaPrimary || 'Explore Academic Curriculum'}
+                    </button>
+                    <button className="px-3.5 py-1.5 bg-stone-100 border border-stone-300 text-stone-800 rounded text-xs font-semibold">
+                      {localSettings.heroCtaSecondary || 'Admissions & Tuition'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Academic Divisions Preview */}
+                <div className="space-y-3">
+                  <div className="text-xs font-semibold uppercase tracking-wider text-stone-500">
+                    Academic Continuum
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {(localSettings.academicDivisions || []).slice(0, 3).map((div, i) => (
+                      <div key={i} className="p-3 rounded border border-stone-200 bg-stone-50 text-xs space-y-1">
+                        <div className="font-serif font-bold text-stone-900">{div.name}</div>
+                        <div className="text-[11px] text-amber-800 font-medium">{div.subtitle}</div>
+                        <p className="text-[11px] text-stone-600 line-clamp-2">{div.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Head of School Preview */}
+                <div className="p-4 bg-stone-50 rounded border border-stone-200 text-xs space-y-2">
+                  <div className="font-serif font-bold text-stone-900 text-sm">
+                    {localSettings.headOfSchoolName}
+                  </div>
+                  <div className="text-[11px] text-stone-500">{localSettings.headOfSchoolTitle}</div>
+                  <p className="italic text-stone-700 leading-relaxed">
+                    "{localSettings.headOfSchoolQuote}"
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* 5. ADD / EDIT POST MODAL (Gutenberg-Style Form)          */}
+      {/* ======================================================== */}
+      {isAddPostOpen && (
+        <div className="fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full border border-stone-300 overflow-hidden">
+            <div className="px-5 py-3.5 bg-[#1d2327] text-white flex items-center justify-between">
+              <span className="font-serif font-bold text-sm">
+                {editingPost ? 'Edit Post' : 'Add New Post / Announcement'}
+              </span>
+              <button onClick={() => setIsAddPostOpen(false)} className="text-stone-400 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePost} className="p-6 space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-stone-800 mb-1">Post Title</label>
+                <input
+                  type="text"
+                  required
+                  value={postTitle}
+                  onChange={e => setPostTitle(e.target.value)}
+                  placeholder="Enter post title..."
+                  className="w-full px-3 py-2 border border-stone-300 rounded font-serif text-sm font-bold focus:border-[#2271b1] focus:ring-1 focus:ring-[#2271b1] outline-none"
+                />
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-semibold text-stone-800 mb-1">Academy Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={localSettings.schoolName}
-                    onChange={(e) => setLocalSettings({ ...localSettings, schoolName: e.target.value })}
-                    className="w-full px-3 py-2 border border-stone-300 rounded-md focus:ring-1 focus:ring-stone-800 text-xs"
-                  />
+                  <label className="block font-bold text-stone-800 mb-1">Category</label>
+                  <select
+                    value={postCategory}
+                    onChange={e => setPostCategory(e.target.value as any)}
+                    className="w-full px-3 py-2 border border-stone-300 rounded bg-white"
+                  >
+                    <option value="Academics">Academics</option>
+                    <option value="Campus Alert">Campus Alert</option>
+                    <option value="Student Life">Student Life</option>
+                    <option value="Arts & Athletics">Arts & Athletics</option>
+                  </select>
                 </div>
                 <div>
-                  <label className="block font-semibold text-stone-800 mb-1">Founded Year</label>
+                  <label className="block font-bold text-stone-800 mb-1">Author Credit</label>
                   <input
-                    type="number"
-                    required
-                    value={localSettings.foundedYear}
-                    onChange={(e) => setLocalSettings({ ...localSettings, foundedYear: parseInt(e.target.value) || 1903 })}
-                    className="w-full px-3 py-2 border border-stone-300 rounded-md focus:ring-1 focus:ring-stone-800 text-xs"
+                    type="text"
+                    value={postAuthor}
+                    onChange={e => setPostAuthor(e.target.value)}
+                    className="w-full px-3 py-2 border border-stone-300 rounded"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block font-semibold text-stone-800 mb-1">Institutional Motto</label>
+              <div className="flex items-center gap-2">
                 <input
-                  type="text"
-                  required
-                  value={localSettings.motto}
-                  onChange={(e) => setLocalSettings({ ...localSettings, motto: e.target.value })}
-                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:ring-1 focus:ring-stone-800 text-xs"
+                  type="checkbox"
+                  id="urgentFlag"
+                  checked={postUrgent}
+                  onChange={e => setPostUrgent(e.target.checked)}
+                  className="rounded text-red-600 focus:ring-red-500"
                 />
-              </div>
-
-              <div className="pt-2 border-t border-stone-100">
-                <label className="block font-semibold text-stone-800 mb-1">Hero Main Headline</label>
-                <input
-                  type="text"
-                  required
-                  value={localSettings.heroHeadline}
-                  onChange={(e) => setLocalSettings({ ...localSettings, heroHeadline: e.target.value })}
-                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:ring-1 focus:ring-stone-800 text-xs font-serif text-sm"
-                />
+                <label htmlFor="urgentFlag" className="font-semibold text-stone-800">
+                  Mark as Urgent Alert (triggers top banner notification for students and teachers)
+                </label>
               </div>
 
               <div>
-                <label className="block font-semibold text-stone-800 mb-1">Hero Narrative Subtitle</label>
+                <label className="block font-bold text-stone-800 mb-1">Content Body</label>
                 <textarea
-                  rows={3}
+                  rows={5}
                   required
-                  value={localSettings.heroSubtitle}
-                  onChange={(e) => setLocalSettings({ ...localSettings, heroSubtitle: e.target.value })}
-                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:ring-1 focus:ring-stone-800 text-xs leading-relaxed"
+                  value={postContent}
+                  onChange={e => setPostContent(e.target.value)}
+                  placeholder="Write announcement body..."
+                  className="w-full px-3 py-2 border border-stone-300 rounded leading-relaxed focus:border-[#2271b1] focus:ring-1 focus:ring-[#2271b1] outline-none"
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-stone-100">
-                <div>
-                  <label className="block font-semibold text-stone-800 mb-1">Active Term</label>
-                  <input
-                    type="text"
-                    required
-                    value={localSettings.termName}
-                    onChange={(e) => setLocalSettings({ ...localSettings, termName: e.target.value })}
-                    className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-stone-800 mb-1">Admissions Deadline</label>
-                  <input
-                    type="text"
-                    required
-                    value={localSettings.admissionsDeadline}
-                    onChange={(e) => setLocalSettings({ ...localSettings, admissionsDeadline: e.target.value })}
-                    className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-stone-800 mb-1">Campus Visiting Hours</label>
-                  <input
-                    type="text"
-                    required
-                    value={localSettings.visitingHours}
-                    onChange={(e) => setLocalSettings({ ...localSettings, visitingHours: e.target.value })}
-                    className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-semibold text-stone-800 mb-1">Switchboard Phone</label>
-                  <input
-                    type="text"
-                    required
-                    value={localSettings.phone}
-                    onChange={(e) => setLocalSettings({ ...localSettings, phone: e.target.value })}
-                    className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-stone-800 mb-1">24/7 Security Emergency</label>
-                  <input
-                    type="text"
-                    required
-                    value={localSettings.emergencyPhone}
-                    onChange={(e) => setLocalSettings({ ...localSettings, emergencyPhone: e.target.value })}
-                    className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-stone-800 mb-1">Top Banner Alert Link Text</label>
-                <input
-                  type="text"
-                  required
-                  value={localSettings.topRibbonAlert}
-                  onChange={(e) => setLocalSettings({ ...localSettings, topRibbonAlert: e.target.value })}
-                  className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-stone-800 mb-1">Official Accreditation Statement</label>
-                <input
-                  type="text"
-                  required
-                  value={localSettings.accreditationText}
-                  onChange={(e) => setLocalSettings({ ...localSettings, accreditationText: e.target.value })}
-                  className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs"
-                />
-              </div>
-
-              <div className="pt-4 border-t border-stone-200 flex justify-end">
+              <div className="pt-3 border-t border-stone-200 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddPostOpen(false)}
+                  className="px-4 py-2 border border-stone-300 text-stone-700 hover:bg-stone-100 rounded font-medium"
+                >
+                  Cancel
+                </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-stone-900 hover:bg-stone-800 text-white font-semibold rounded-lg shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+                  className="px-5 py-2 bg-[#2271b1] hover:bg-[#135e96] text-white rounded font-bold shadow-xs cursor-pointer"
                 >
-                  <Save className="w-4 h-4" />
-                  <span>Publish Site Updates</span>
+                  {editingPost ? 'Update Post' : 'Publish Post'}
                 </button>
               </div>
             </form>
           </div>
-
-          {/* Live Preview Card */}
-          <div className="lg:col-span-4 space-y-4">
-            <div className="bg-white rounded-xl border border-stone-200 p-5 shadow-xs">
-              <div className="text-xs font-semibold uppercase tracking-wider text-stone-500 mb-3 flex items-center gap-1.5">
-                <Eye className="w-3.5 h-3.5" />
-                <span>Live Hero Preview</span>
-              </div>
-              <div className="p-4 bg-stone-50 rounded-lg border border-stone-200 text-xs space-y-3">
-                <div className="text-[11px] font-semibold text-stone-400 uppercase tracking-widest">
-                  {localSettings.schoolName} · Founded {localSettings.foundedYear}
-                </div>
-                <h4 className="text-base font-serif font-bold text-stone-950 leading-snug">
-                  {localSettings.heroHeadline}
-                </h4>
-                <p className="text-stone-600 line-clamp-3 text-[11px]">
-                  {localSettings.heroSubtitle}
-                </p>
-                <div className="pt-2 border-t border-stone-200 text-[11px] text-stone-500 space-y-1">
-                  <div><strong>Term:</strong> {localSettings.termName}</div>
-                  <div><strong>Deadline:</strong> {localSettings.admissionsDeadline}</div>
-                  <div><strong>Hours:</strong> {localSettings.visitingHours}</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4 bg-amber-50/60 rounded-xl border border-amber-200 text-xs text-amber-900 leading-relaxed">
-              <strong>Admin Note:</strong> Modifications made in this administration console update the live in-memory state of the entire site, including top navigation, hero ribbon, admissions forms, and calendar headers immediately.
-            </div>
-          </div>
         </div>
       )}
 
       {/* ======================================================== */}
-      {/* 2. ANNOUNCEMENTS & BULLETINS CMS */}
+      {/* 6. ADD EVENT MODAL                                       */}
       {/* ======================================================== */}
-      {activeAdminTab === 'announcements' && (
-        <div className="bg-white rounded-xl border border-stone-200 p-6 shadow-xs space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-stone-200">
-            <div>
-              <h3 className="text-lg font-serif font-bold text-stone-950">
-                Official Academy Bulletins Manager
-              </h3>
-              <p className="text-xs text-stone-500 mt-0.5">
-                Create, revise, and dispatch priority alerts and administrative announcements.
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                setEditingAnnouncement(null);
-                setIsAddAnnouncementOpen(true);
-              }}
-              className="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Create Announcement</span>
-            </button>
-          </div>
-
-          {/* Bulletins Table */}
-          <div className="border border-stone-200 rounded-lg overflow-hidden">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-stone-50 border-b border-stone-200 text-stone-600 font-semibold">
-                <tr>
-                  <th className="p-3">Title & Category</th>
-                  <th className="p-3">Date</th>
-                  <th className="p-3">Author</th>
-                  <th className="p-3">Urgency</th>
-                  <th className="p-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-stone-200">
-                {announcements.map(ann => (
-                  <tr key={ann.id} className="hover:bg-stone-50/50">
-                    <td className="p-3">
-                      <div className="font-semibold text-stone-900">{ann.title}</div>
-                      <div className="text-stone-500 text-[11px]">{ann.category}</div>
-                    </td>
-                    <td className="p-3 text-stone-600 font-medium tabular-nums">{ann.date}</td>
-                    <td className="p-3 text-stone-600">{ann.author}</td>
-                    <td className="p-3">
-                      {ann.urgent ? (
-                        <span className="text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded text-[11px] font-semibold">
-                          Urgent
-                        </span>
-                      ) : (
-                        <span className="text-stone-500 text-[11px]">Standard</span>
-                      )}
-                    </td>
-                    <td className="p-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => setEditingAnnouncement(ann)}
-                          className="p-1.5 text-stone-600 hover:text-stone-950 hover:bg-stone-100 rounded"
-                          title="Edit bulletin"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => onDeleteAnnouncement(ann.id)}
-                          className="p-1.5 text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded"
-                          title="Delete bulletin"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Add / Edit Announcement Modal */}
-          {(isAddAnnouncementOpen || editingAnnouncement) && (
-            <div className="fixed inset-0 z-50 bg-stone-950/40 backdrop-blur-xs flex items-center justify-center p-4">
-              <div className="bg-white rounded-xl border border-stone-200 shadow-xl max-w-lg w-full p-6 animate-in fade-in zoom-in-95 duration-200">
-                <div className="flex items-center justify-between pb-3 border-b border-stone-200">
-                  <h4 className="text-base font-serif font-bold text-stone-950">
-                    {editingAnnouncement ? 'Edit Announcement' : 'Publish New Announcement'}
-                  </h4>
-                  <button
-                    onClick={() => {
-                      setIsAddAnnouncementOpen(false);
-                      setEditingAnnouncement(null);
-                    }}
-                    className="text-stone-400 hover:text-stone-700"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-
-                <form onSubmit={handleSaveAnnouncement} className="py-4 space-y-3.5 text-xs">
-                  <div>
-                    <label className="block font-medium text-stone-700 mb-1">Title</label>
-                    <input
-                      type="text"
-                      required
-                      value={editingAnnouncement ? editingAnnouncement.title : newAnnTitle}
-                      onChange={(e) => {
-                        if (editingAnnouncement) {
-                          setEditingAnnouncement({ ...editingAnnouncement, title: e.target.value });
-                        } else {
-                          setNewAnnTitle(e.target.value);
-                        }
-                      }}
-                      className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-medium text-stone-700 mb-1">Category</label>
-                      <select
-                        value={editingAnnouncement ? editingAnnouncement.category : newAnnCategory}
-                        onChange={(e) => {
-                          const cat = e.target.value as any;
-                          if (editingAnnouncement) {
-                            setEditingAnnouncement({ ...editingAnnouncement, category: cat });
-                          } else {
-                            setNewAnnCategory(cat);
-                          }
-                        }}
-                        className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs bg-white"
-                      >
-                        <option value="Academics">Academics</option>
-                        <option value="Campus Alert">Campus Alert</option>
-                        <option value="Student Life">Student Life</option>
-                        <option value="Arts & Athletics">Arts & Athletics</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block font-medium text-stone-700 mb-1">Date</label>
-                      <input
-                        type="date"
-                        required
-                        value={editingAnnouncement ? editingAnnouncement.date : newAnnDate}
-                        onChange={(e) => {
-                          if (editingAnnouncement) {
-                            setEditingAnnouncement({ ...editingAnnouncement, date: e.target.value });
-                          } else {
-                            setNewAnnDate(e.target.value);
-                          }
-                        }}
-                        className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block font-medium text-stone-700 mb-1">Author / Department</label>
-                    <input
-                      type="text"
-                      required
-                      value={editingAnnouncement ? editingAnnouncement.author : newAnnAuthor}
-                      onChange={(e) => {
-                        if (editingAnnouncement) {
-                          setEditingAnnouncement({ ...editingAnnouncement, author: e.target.value });
-                        } else {
-                          setNewAnnAuthor(e.target.value);
-                        }
-                      }}
-                      className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-2 pt-1">
-                    <input
-                      type="checkbox"
-                      id="urgent-toggle"
-                      checked={editingAnnouncement ? editingAnnouncement.urgent : newAnnUrgent}
-                      onChange={(e) => {
-                        if (editingAnnouncement) {
-                          setEditingAnnouncement({ ...editingAnnouncement, urgent: e.target.checked });
-                        } else {
-                          setNewAnnUrgent(e.target.checked);
-                        }
-                      }}
-                      className="w-4 h-4 rounded text-stone-900"
-                    />
-                    <label htmlFor="urgent-toggle" className="font-semibold text-stone-800 text-xs">
-                      Mark as Urgent Notice (triggers top notification alert)
-                    </label>
-                  </div>
-
-                  <div>
-                    <label className="block font-medium text-stone-700 mb-1">Announcement Body</label>
-                    <textarea
-                      rows={4}
-                      required
-                      value={editingAnnouncement ? editingAnnouncement.content : newAnnContent}
-                      onChange={(e) => {
-                        if (editingAnnouncement) {
-                          setEditingAnnouncement({ ...editingAnnouncement, content: e.target.value });
-                        } else {
-                          setNewAnnContent(e.target.value);
-                        }
-                      }}
-                      className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs leading-relaxed"
-                    />
-                  </div>
-
-                  <div className="pt-3 border-t border-stone-200 flex justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsAddAnnouncementOpen(false);
-                        setEditingAnnouncement(null);
-                      }}
-                      className="px-3.5 py-2 text-stone-600 hover:text-stone-900"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-4 py-2 bg-stone-900 text-white font-semibold rounded-md hover:bg-stone-800"
-                    >
-                      Save Bulletin
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ======================================================== */}
-      {/* 3. MASTER EVENT MANAGER (CALENDAR CMS) */}
-      {/* ======================================================== */}
-      {activeAdminTab === 'events' && (
-        <div className="bg-white rounded-xl border border-stone-200 p-6 shadow-xs space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-stone-200">
-            <div>
-              <h3 className="text-lg font-serif font-bold text-stone-950">
-                Master Calendar & Event Management
-              </h3>
-              <p className="text-xs text-stone-500 mt-0.5">
-                Schedule exams, athletic regattas, galas, and open house sessions.
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                setEditingEvent(null);
-                setIsAddEventOpen(true);
-              }}
-              className="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Calendar Event</span>
-            </button>
-          </div>
-
-          <div className="border border-stone-200 rounded-lg overflow-hidden">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-stone-50 border-b border-stone-200 text-stone-600 font-semibold">
-                <tr>
-                  <th className="p-3">Title & Category</th>
-                  <th className="p-3">Date & Time</th>
-                  <th className="p-3">Location</th>
-                  <th className="p-3">Audience</th>
-                  <th className="p-3">RSVPs</th>
-                  <th className="p-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-stone-200">
-                {events.map(evt => (
-                  <tr key={evt.id} className="hover:bg-stone-50/50">
-                    <td className="p-3">
-                      <div className="font-semibold text-stone-900">{evt.title}</div>
-                      <div className="text-stone-500 text-[11px] capitalize">{evt.category} · {evt.organizer}</div>
-                    </td>
-                    <td className="p-3 text-stone-700">
-                      <div className="font-medium tabular-nums">{evt.date}</div>
-                      <div className="text-[11px] text-stone-500">{evt.time}</div>
-                    </td>
-                    <td className="p-3 text-stone-600">
-                      <div>{evt.location}</div>
-                      <div className="text-[11px] text-stone-500">{evt.building}</div>
-                    </td>
-                    <td className="p-3 text-stone-600 capitalize">
-                      {evt.targetAudience}
-                    </td>
-                    <td className="p-3 font-semibold text-stone-900 tabular-nums">
-                      {evt.rsvpCount}
-                    </td>
-                    <td className="p-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => setEditingEvent(evt)}
-                          className="p-1.5 text-stone-600 hover:text-stone-950 hover:bg-stone-100 rounded"
-                          title="Edit event"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => onDeleteEvent(evt.id)}
-                          className="p-1.5 text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded"
-                          title="Delete event"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Add / Edit Event Modal */}
-          {(isAddEventOpen || editingEvent) && (
-            <div className="fixed inset-0 z-50 bg-stone-950/40 backdrop-blur-xs flex items-center justify-center p-4">
-              <div className="bg-white rounded-xl border border-stone-200 shadow-xl max-w-lg w-full p-6 animate-in fade-in zoom-in-95 duration-200">
-                <div className="flex items-center justify-between pb-3 border-b border-stone-200">
-                  <h4 className="text-base font-serif font-bold text-stone-950">
-                    {editingEvent ? 'Edit Event' : 'Add Calendar Event'}
-                  </h4>
-                  <button
-                    onClick={() => {
-                      setIsAddEventOpen(false);
-                      setEditingEvent(null);
-                    }}
-                    className="text-stone-400 hover:text-stone-700"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-
-                <form onSubmit={handleSaveEvent} className="py-4 space-y-3.5 text-xs">
-                  <div>
-                    <label className="block font-medium text-stone-700 mb-1">Event Title</label>
-                    <input
-                      type="text"
-                      required
-                      value={editingEvent ? editingEvent.title : eventForm.title}
-                      onChange={(e) => {
-                        if (editingEvent) {
-                          setEditingEvent({ ...editingEvent, title: e.target.value });
-                        } else {
-                          setEventForm({ ...eventForm, title: e.target.value });
-                        }
-                      }}
-                      className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-medium text-stone-700 mb-1">Category</label>
-                      <select
-                        value={editingEvent ? editingEvent.category : eventForm.category}
-                        onChange={(e) => {
-                          const cat = e.target.value as any;
-                          if (editingEvent) {
-                            setEditingEvent({ ...editingEvent, category: cat });
-                          } else {
-                            setEventForm({ ...eventForm, category: cat });
-                          }
-                        }}
-                        className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs bg-white"
-                      >
-                        <option value="academic">Academics & Exams</option>
-                        <option value="arts">Arts & Music</option>
-                        <option value="athletics">Athletics</option>
-                        <option value="community">Community</option>
-                        <option value="admissions">Admissions</option>
-                        <option value="pta">Parents & PTA</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block font-medium text-stone-700 mb-1">Target Audience</label>
-                      <select
-                        value={editingEvent ? editingEvent.targetAudience : eventForm.targetAudience}
-                        onChange={(e) => {
-                          const aud = e.target.value as any;
-                          if (editingEvent) {
-                            setEditingEvent({ ...editingEvent, targetAudience: aud });
-                          } else {
-                            setEventForm({ ...eventForm, targetAudience: aud });
-                          }
-                        }}
-                        className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs bg-white"
-                      >
-                        <option value="all">All Community</option>
-                        <option value="students">Students Only</option>
-                        <option value="parents">Parents Only</option>
-                        <option value="faculty">Faculty Only</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-medium text-stone-700 mb-1">Date</label>
-                      <input
-                        type="date"
-                        required
-                        value={editingEvent ? editingEvent.date : eventForm.date}
-                        onChange={(e) => {
-                          if (editingEvent) {
-                            setEditingEvent({ ...editingEvent, date: e.target.value });
-                          } else {
-                            setEventForm({ ...eventForm, date: e.target.value });
-                          }
-                        }}
-                        className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-medium text-stone-700 mb-1">Time</label>
-                      <input
-                        type="text"
-                        required
-                        value={editingEvent ? editingEvent.time : eventForm.time}
-                        onChange={(e) => {
-                          if (editingEvent) {
-                            setEditingEvent({ ...editingEvent, time: e.target.value });
-                          } else {
-                            setEventForm({ ...eventForm, time: e.target.value });
-                          }
-                        }}
-                        className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-medium text-stone-700 mb-1">Location / Venue</label>
-                      <input
-                        type="text"
-                        required
-                        value={editingEvent ? editingEvent.location : eventForm.location}
-                        onChange={(e) => {
-                          if (editingEvent) {
-                            setEditingEvent({ ...editingEvent, location: e.target.value });
-                          } else {
-                            setEventForm({ ...eventForm, location: e.target.value });
-                          }
-                        }}
-                        className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-medium text-stone-700 mb-1">Building</label>
-                      <input
-                        type="text"
-                        value={editingEvent ? editingEvent.building : eventForm.building}
-                        onChange={(e) => {
-                          if (editingEvent) {
-                            setEditingEvent({ ...editingEvent, building: e.target.value });
-                          } else {
-                            setEventForm({ ...eventForm, building: e.target.value });
-                          }
-                        }}
-                        className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block font-medium text-stone-700 mb-1">Organizer / Department</label>
-                    <input
-                      type="text"
-                      value={editingEvent ? editingEvent.organizer : eventForm.organizer}
-                      onChange={(e) => {
-                        if (editingEvent) {
-                          setEditingEvent({ ...editingEvent, organizer: e.target.value });
-                        } else {
-                          setEventForm({ ...eventForm, organizer: e.target.value });
-                        }
-                      }}
-                      className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-medium text-stone-700 mb-1">Description</label>
-                    <textarea
-                      rows={3}
-                      value={editingEvent ? editingEvent.description : eventForm.description}
-                      onChange={(e) => {
-                        if (editingEvent) {
-                          setEditingEvent({ ...editingEvent, description: e.target.value });
-                        } else {
-                          setEventForm({ ...eventForm, description: e.target.value });
-                        }
-                      }}
-                      className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs"
-                    />
-                  </div>
-
-                  <div className="pt-3 border-t border-stone-200 flex justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsAddEventOpen(false);
-                        setEditingEvent(null);
-                      }}
-                      className="px-3.5 py-2 text-stone-600 hover:text-stone-900"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-4 py-2 bg-stone-900 text-white font-semibold rounded-md hover:bg-stone-800"
-                    >
-                      Save Event
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ======================================================== */}
-      {/* 4. FACULTY & STAFF DIRECTORY CMS */}
-      {/* ======================================================== */}
-      {activeAdminTab === 'faculty' && (
-        <div className="bg-white rounded-xl border border-stone-200 p-6 shadow-xs space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-stone-200">
-            <div>
-              <h3 className="text-lg font-serif font-bold text-stone-950">
-                Faculty & Department Chairs Directory
-              </h3>
-              <p className="text-xs text-stone-500 mt-0.5">
-                Maintain instructional rosters, office hour availability, and faculty credentials.
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                setEditingFaculty(null);
-                setIsAddFacultyOpen(true);
-              }}
-              className="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Faculty Member</span>
-            </button>
-          </div>
-
-          <div className="border border-stone-200 rounded-lg overflow-hidden">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-stone-50 border-b border-stone-200 text-stone-600 font-semibold">
-                <tr>
-                  <th className="p-3">Faculty Scholar</th>
-                  <th className="p-3">Department</th>
-                  <th className="p-3">Office Location & Hours</th>
-                  <th className="p-3">Consultations</th>
-                  <th className="p-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-stone-200">
-                {facultyList.map(f => (
-                  <tr key={f.id} className="hover:bg-stone-50/50">
-                    <td className="p-3">
-                      <div className="font-semibold text-stone-900">{f.name}</div>
-                      <div className="text-stone-500 text-[11px]">{f.title}</div>
-                      <div className="text-stone-400 text-[10px]">{f.email}</div>
-                    </td>
-                    <td className="p-3 text-stone-700 font-medium">
-                      {f.department}
-                    </td>
-                    <td className="p-3 text-stone-600">
-                      <div>{f.officeRoom}</div>
-                      <div className="text-[11px] text-stone-500">{f.officeHours}</div>
-                    </td>
-                    <td className="p-3">
-                      {f.consultationAvailable ? (
-                        <span className="text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded text-[11px] font-semibold">
-                          Available
-                        </span>
-                      ) : (
-                        <span className="text-stone-400 text-[11px]">Appointment only</span>
-                      )}
-                    </td>
-                    <td className="p-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => setEditingFaculty(f)}
-                          className="p-1.5 text-stone-600 hover:text-stone-950 hover:bg-stone-100 rounded"
-                          title="Edit faculty"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => onDeleteFaculty(f.id)}
-                          className="p-1.5 text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded"
-                          title="Remove faculty"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Add / Edit Faculty Modal */}
-          {(isAddFacultyOpen || editingFaculty) && (
-            <div className="fixed inset-0 z-50 bg-stone-950/40 backdrop-blur-xs flex items-center justify-center p-4">
-              <div className="bg-white rounded-xl border border-stone-200 shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 animate-in fade-in zoom-in-95 duration-200">
-                <div className="flex items-center justify-between pb-3 border-b border-stone-200">
-                  <h4 className="text-base font-serif font-bold text-stone-950">
-                    {editingFaculty ? 'Edit Faculty Profile' : 'Add New Faculty Member'}
-                  </h4>
-                  <button
-                    onClick={() => {
-                      setIsAddFacultyOpen(false);
-                      setEditingFaculty(null);
-                    }}
-                    className="text-stone-400 hover:text-stone-700"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-
-                <form onSubmit={handleSaveFaculty} className="py-4 space-y-3.5 text-xs">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-medium text-stone-700 mb-1">Full Name</label>
-                      <input
-                        type="text"
-                        required
-                        value={editingFaculty ? editingFaculty.name : facultyForm.name}
-                        onChange={(e) => {
-                          if (editingFaculty) {
-                            setEditingFaculty({ ...editingFaculty, name: e.target.value });
-                          } else {
-                            setFacultyForm({ ...facultyForm, name: e.target.value });
-                          }
-                        }}
-                        className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-medium text-stone-700 mb-1">Academic Department</label>
-                      <select
-                        value={editingFaculty ? editingFaculty.department : facultyForm.department}
-                        onChange={(e) => {
-                          const d = e.target.value as any;
-                          if (editingFaculty) {
-                            setEditingFaculty({ ...editingFaculty, department: d });
-                          } else {
-                            setFacultyForm({ ...facultyForm, department: d });
-                          }
-                        }}
-                        className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs bg-white"
-                      >
-                        <option value="Sciences & Mathematics">Sciences & Mathematics</option>
-                        <option value="Humanities & Social Sciences">Humanities & Social Sciences</option>
-                        <option value="World Languages">World Languages</option>
-                        <option value="Fine & Performing Arts">Fine & Performing Arts</option>
-                        <option value="Athletics & Physical Education">Athletics & Physical Education</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block font-medium text-stone-700 mb-1">Title / Chair Designation</label>
-                    <input
-                      type="text"
-                      required
-                      value={editingFaculty ? editingFaculty.title : facultyForm.title}
-                      onChange={(e) => {
-                        if (editingFaculty) {
-                          setEditingFaculty({ ...editingFaculty, title: e.target.value });
-                        } else {
-                          setFacultyForm({ ...facultyForm, title: e.target.value });
-                        }
-                      }}
-                      className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-medium text-stone-700 mb-1">Institutional Email</label>
-                      <input
-                        type="email"
-                        required
-                        value={editingFaculty ? editingFaculty.email : facultyForm.email}
-                        onChange={(e) => {
-                          if (editingFaculty) {
-                            setEditingFaculty({ ...editingFaculty, email: e.target.value });
-                          } else {
-                            setFacultyForm({ ...facultyForm, email: e.target.value });
-                          }
-                        }}
-                        className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-medium text-stone-700 mb-1">Phone Extension</label>
-                      <input
-                        type="text"
-                        value={editingFaculty ? editingFaculty.phone : facultyForm.phone}
-                        onChange={(e) => {
-                          if (editingFaculty) {
-                            setEditingFaculty({ ...editingFaculty, phone: e.target.value });
-                          } else {
-                            setFacultyForm({ ...facultyForm, phone: e.target.value });
-                          }
-                        }}
-                        className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-medium text-stone-700 mb-1">Office Room</label>
-                      <input
-                        type="text"
-                        required
-                        value={editingFaculty ? editingFaculty.officeRoom : facultyForm.officeRoom}
-                        onChange={(e) => {
-                          if (editingFaculty) {
-                            setEditingFaculty({ ...editingFaculty, officeRoom: e.target.value });
-                          } else {
-                            setFacultyForm({ ...facultyForm, officeRoom: e.target.value });
-                          }
-                        }}
-                        className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-medium text-stone-700 mb-1">Office Hours Schedule</label>
-                      <input
-                        type="text"
-                        required
-                        value={editingFaculty ? editingFaculty.officeHours : facultyForm.officeHours}
-                        onChange={(e) => {
-                          if (editingFaculty) {
-                            setEditingFaculty({ ...editingFaculty, officeHours: e.target.value });
-                          } else {
-                            setFacultyForm({ ...facultyForm, officeHours: e.target.value });
-                          }
-                        }}
-                        className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block font-medium text-stone-700 mb-1">Academic Degrees (Comma separated)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Ph.D. Physics (Harvard), B.S. (MIT)"
-                      value={
-                        editingFaculty
-                          ? editingFaculty.education.join(', ')
-                          : facultyForm.education
-                      }
-                      onChange={(e) => {
-                        if (editingFaculty) {
-                          setEditingFaculty({
-                            ...editingFaculty,
-                            education: e.target.value.split(',').map(s => s.trim()).filter(Boolean)
-                          });
-                        } else {
-                          setFacultyForm({ ...facultyForm, education: e.target.value });
-                        }
-                      }}
-                      className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-medium text-stone-700 mb-1">Courses Taught (Comma separated)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. AP Physics C, Classical Mechanics, Quantum Theory"
-                      value={
-                        editingFaculty
-                          ? editingFaculty.coursesTaught.join(', ')
-                          : facultyForm.coursesTaught
-                      }
-                      onChange={(e) => {
-                        if (editingFaculty) {
-                          setEditingFaculty({
-                            ...editingFaculty,
-                            coursesTaught: e.target.value.split(',').map(s => s.trim()).filter(Boolean)
-                          });
-                        } else {
-                          setFacultyForm({ ...facultyForm, coursesTaught: e.target.value });
-                        }
-                      }}
-                      className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-medium text-stone-700 mb-1">Biographical Statement</label>
-                    <textarea
-                      rows={3}
-                      value={editingFaculty ? editingFaculty.bio : facultyForm.bio}
-                      onChange={(e) => {
-                        if (editingFaculty) {
-                          setEditingFaculty({ ...editingFaculty, bio: e.target.value });
-                        } else {
-                          setFacultyForm({ ...facultyForm, bio: e.target.value });
-                        }
-                      }}
-                      className="w-full px-3 py-2 border border-stone-300 rounded-md text-xs"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-2 pt-1">
-                    <input
-                      type="checkbox"
-                      id="fac-consult-toggle"
-                      checked={
-                        editingFaculty
-                          ? editingFaculty.consultationAvailable
-                          : facultyForm.consultationAvailable
-                      }
-                      onChange={(e) => {
-                        if (editingFaculty) {
-                          setEditingFaculty({
-                            ...editingFaculty,
-                            consultationAvailable: e.target.checked
-                          });
-                        } else {
-                          setFacultyForm({
-                            ...facultyForm,
-                            consultationAvailable: e.target.checked
-                          });
-                        }
-                      }}
-                      className="w-4 h-4 rounded text-stone-900"
-                    />
-                    <label htmlFor="fac-consult-toggle" className="font-semibold text-stone-800 text-xs">
-                      Enable online office consultation bookings for this faculty member
-                    </label>
-                  </div>
-
-                  <div className="pt-3 border-t border-stone-200 flex justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsAddFacultyOpen(false);
-                        setEditingFaculty(null);
-                      }}
-                      className="px-3.5 py-2 text-stone-600 hover:text-stone-900"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-4 py-2 bg-stone-900 text-white font-semibold rounded-md hover:bg-stone-800"
-                    >
-                      Save Faculty Profile
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ======================================================== */}
-      {/* 5. ADMISSIONS INQUIRIES DESK */}
-      {/* ======================================================== */}
-      {activeAdminTab === 'inquiries' && (
-        <div className="bg-white rounded-xl border border-stone-200 p-6 shadow-xs space-y-6">
-          <div className="flex items-center justify-between pb-4 border-b border-stone-200">
-            <div>
-              <h3 className="text-lg font-serif font-bold text-stone-950">
-                Prospective Student Admissions Inquiries
-              </h3>
-              <p className="text-xs text-stone-500 mt-0.5">
-                Incoming requests submitted via the public admissions inquiry portal.
-              </p>
-            </div>
-            <div className="text-xs text-stone-600">
-              Total Inquiries: <strong className="text-stone-900 tabular-nums">{inquiries.length}</strong>
-            </div>
-          </div>
-
-          <div className="border border-stone-200 rounded-lg overflow-hidden">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-stone-50 border-b border-stone-200 text-stone-600 font-semibold">
-                <tr>
-                  <th className="p-3">Applicant & Level</th>
-                  <th className="p-3">Parent Contact</th>
-                  <th className="p-3">Inquiry Notes</th>
-                  <th className="p-3">Status Workflow</th>
-                  <th className="p-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-stone-200">
-                {inquiries.map(inq => (
-                  <tr key={inq.id} className="hover:bg-stone-50/50">
-                    <td className="p-3">
-                      <div className="font-semibold text-stone-900">{inq.applicantName}</div>
-                      <div className="text-stone-500 text-[11px]">{inq.gradeLevel}</div>
-                      <div className="text-stone-400 text-[10px] tabular-nums mt-0.5">Recv: {inq.submittedAt}</div>
-                    </td>
-                    <td className="p-3 text-stone-700">
-                      <div>{inq.parentName}</div>
-                      <a href={`mailto:${inq.parentEmail}`} className="text-stone-500 text-[11px] hover:underline">
-                        {inq.parentEmail}
-                      </a>
-                    </td>
-                    <td className="p-3 text-stone-600 max-w-xs">
-                      <p className="line-clamp-2">{inq.inquiryNotes}</p>
-                    </td>
-                    <td className="p-3">
-                      <select
-                        value={inq.status}
-                        onChange={(e) => onUpdateInquiryStatus(inq.id, e.target.value as any)}
-                        className={`text-xs font-semibold px-2 py-1 rounded border ${
-                          inq.status === 'new'
-                            ? 'bg-amber-50 text-amber-800 border-amber-200'
-                            : inq.status === 'tour-scheduled'
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                            : inq.status === 'contacted'
-                            ? 'bg-blue-50 text-blue-800 border-blue-200'
-                            : 'bg-stone-100 text-stone-600 border-stone-200'
-                        }`}
-                      >
-                        <option value="new">New Inquiry</option>
-                        <option value="contacted">Contacted</option>
-                        <option value="tour-scheduled">Tour Scheduled</option>
-                        <option value="archived">Archived</option>
-                      </select>
-                    </td>
-                    <td className="p-3 text-right">
-                      <button
-                        onClick={() => onDeleteInquiry(inq.id)}
-                        className="p-1.5 text-stone-400 hover:text-rose-600 rounded"
-                        title="Delete inquiry"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* ======================================================== */}
-      {/* 6. KPI METRICS EDITOR */}
-      {/* ======================================================== */}
-      {activeAdminTab === 'stats' && (
-        <div className="bg-white rounded-xl border border-stone-200 p-6 shadow-xs space-y-6">
-          <div className="pb-4 border-b border-stone-200">
-            <h3 className="text-lg font-serif font-bold text-stone-950">
-              Institutional KPI Strip Editor
-            </h3>
-            <p className="text-xs text-stone-500 mt-0.5">
-              These metrics appear in the prominent 4-column banner immediately beneath the homepage hero.
-            </p>
-          </div>
-
-          <form onSubmit={handleSaveStats} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {localStats.map((stat, idx) => (
-                <div key={idx} className="p-4 bg-stone-50 rounded-xl border border-stone-200 space-y-2 text-xs">
-                  <div className="font-semibold text-stone-400 uppercase tracking-wider text-[10px]">
-                    Metric 0{idx + 1}
-                  </div>
-                  <div>
-                    <label className="block text-stone-600 mb-0.5">Value (e.g. 100%, 8:1)</label>
-                    <input
-                      type="text"
-                      required
-                      value={stat.value}
-                      onChange={(e) => {
-                        const next = [...localStats];
-                        next[idx].value = e.target.value;
-                        setLocalStats(next);
-                      }}
-                      className="w-full px-2.5 py-1.5 font-bold font-serif text-sm border border-stone-300 rounded bg-white text-stone-900"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-stone-600 mb-0.5">Label</label>
-                    <input
-                      type="text"
-                      required
-                      value={stat.label}
-                      onChange={(e) => {
-                        const next = [...localStats];
-                        next[idx].label = e.target.value;
-                        setLocalStats(next);
-                      }}
-                      className="w-full px-2.5 py-1.5 border border-stone-300 rounded bg-white text-stone-900 text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-stone-600 mb-0.5">Context Description</label>
-                    <input
-                      type="text"
-                      required
-                      value={stat.detail}
-                      onChange={(e) => {
-                        const next = [...localStats];
-                        next[idx].detail = e.target.value;
-                        setLocalStats(next);
-                      }}
-                      className="w-full px-2.5 py-1.5 border border-stone-300 rounded bg-white text-stone-900 text-xs"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="pt-4 border-t border-stone-200 flex justify-end">
-              <button
-                type="submit"
-                className="px-5 py-2.5 bg-stone-900 hover:bg-stone-800 text-white font-semibold rounded-lg text-xs shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-              >
-                <Save className="w-4 h-4" />
-                <span>Save KPI Strip</span>
+      {isAddEventOpen && (
+        <div className="fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full border border-stone-300 overflow-hidden">
+            <div className="px-5 py-3.5 bg-[#1d2327] text-white flex items-center justify-between">
+              <span className="font-serif font-bold text-sm">Schedule Master Calendar Event</span>
+              <button onClick={() => setIsAddEventOpen(false)} className="text-stone-400 hover:text-white">
+                <X className="w-4 h-4" />
               </button>
             </div>
-          </form>
+
+            <form
+              onSubmit={e => {
+                e.preventDefault();
+                if (!eventForm.title) return;
+                onAddEvent({
+                  ...eventForm,
+                  isPublic: true
+                });
+                setIsAddEventOpen(false);
+                triggerNotice(`Event "${eventForm.title}" scheduled.`);
+              }}
+              className="p-6 space-y-4 text-xs"
+            >
+              <div>
+                <label className="block font-bold text-stone-800 mb-1">Event Title</label>
+                <input
+                  type="text"
+                  required
+                  value={eventForm.title}
+                  onChange={e => setEventForm({ ...eventForm, title: e.target.value })}
+                  placeholder="e.g., Annual Science Symposium"
+                  className="w-full px-3 py-2 border border-stone-300 rounded"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-stone-800 mb-1">Date</label>
+                  <input
+                    type="date"
+                    value={eventForm.date}
+                    onChange={e => setEventForm({ ...eventForm, date: e.target.value })}
+                    className="w-full px-3 py-2 border border-stone-300 rounded"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-stone-800 mb-1">Time</label>
+                  <input
+                    type="text"
+                    value={eventForm.time}
+                    onChange={e => setEventForm({ ...eventForm, time: e.target.value })}
+                    placeholder="14:00 - 16:30"
+                    className="w-full px-3 py-2 border border-stone-300 rounded"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-stone-800 mb-1">Location & Hall</label>
+                <input
+                  type="text"
+                  required
+                  value={eventForm.location}
+                  onChange={e => setEventForm({ ...eventForm, location: e.target.value })}
+                  placeholder="Franklin Science Center, Amphitheater B"
+                  className="w-full px-3 py-2 border border-stone-300 rounded"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-stone-800 mb-1">Description</label>
+                <textarea
+                  rows={3}
+                  value={eventForm.description}
+                  onChange={e => setEventForm({ ...eventForm, description: e.target.value })}
+                  className="w-full px-3 py-2 border border-stone-300 rounded"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-stone-200 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddEventOpen(false)}
+                  className="px-4 py-2 border border-stone-300 text-stone-700 hover:bg-stone-100 rounded"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-[#2271b1] hover:bg-[#135e96] text-white rounded font-bold cursor-pointer"
+                >
+                  Schedule Event
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
+      {/* ======================================================== */}
+      {/* 7. ADD FACULTY MODAL                                     */}
+      {/* ======================================================== */}
+      {isAddFacultyOpen && (
+        <div className="fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full border border-stone-300 overflow-hidden">
+            <div className="px-5 py-3.5 bg-[#1d2327] text-white flex items-center justify-between">
+              <span className="font-serif font-bold text-sm">Add New Faculty Fellow</span>
+              <button onClick={() => setIsAddFacultyOpen(false)} className="text-stone-400 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={e => {
+                e.preventDefault();
+                if (!facultyForm.name) return;
+                onAddFaculty({
+                  name: facultyForm.name,
+                  title: facultyForm.title,
+                  department: facultyForm.department,
+                  email: facultyForm.email,
+                  officeRoom: facultyForm.officeRoom,
+                  officeHours: facultyForm.officeHours,
+                  phone: facultyForm.phone,
+                  bio: facultyForm.bio,
+                  education: facultyForm.education.split(',').map(s => s.trim()).filter(Boolean),
+                  coursesTaught: facultyForm.coursesTaught.split(',').map(s => s.trim()).filter(Boolean),
+                  consultationAvailable: facultyForm.consultationAvailable,
+                  avatarColor: 'bg-stone-800'
+                });
+                setIsAddFacultyOpen(false);
+                triggerNotice(`Faculty profile for ${facultyForm.name} added.`);
+              }}
+              className="p-6 space-y-4 text-xs"
+            >
+              <div>
+                <label className="block font-bold text-stone-800 mb-1">Full Name & Title</label>
+                <input
+                  type="text"
+                  required
+                  value={facultyForm.name}
+                  onChange={e => setFacultyForm({ ...facultyForm, name: e.target.value })}
+                  placeholder="e.g., Dr. Arthur Vance"
+                  className="w-full px-3 py-2 border border-stone-300 rounded"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-stone-800 mb-1">Department</label>
+                  <select
+                    value={facultyForm.department}
+                    onChange={e => setFacultyForm({ ...facultyForm, department: e.target.value as any })}
+                    className="w-full px-3 py-2 border border-stone-300 rounded bg-white"
+                  >
+                    <option value="Sciences & Mathematics">Sciences & Mathematics</option>
+                    <option value="Humanities & Social Sciences">Humanities & Social Sciences</option>
+                    <option value="World Languages">World Languages</option>
+                    <option value="Fine & Performing Arts">Fine & Performing Arts</option>
+                    <option value="Athletics & Physical Education">Athletics</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-bold text-stone-800 mb-1">Academic Title</label>
+                  <input
+                    type="text"
+                    value={facultyForm.title}
+                    onChange={e => setFacultyForm({ ...facultyForm, title: e.target.value })}
+                    placeholder="Department Chair"
+                    className="w-full px-3 py-2 border border-stone-300 rounded"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-stone-800 mb-1">Office Room</label>
+                  <input
+                    type="text"
+                    value={facultyForm.officeRoom}
+                    onChange={e => setFacultyForm({ ...facultyForm, officeRoom: e.target.value })}
+                    placeholder="Franklin Science Hall 304"
+                    className="w-full px-3 py-2 border border-stone-300 rounded"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-stone-800 mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={facultyForm.email}
+                    onChange={e => setFacultyForm({ ...facultyForm, email: e.target.value })}
+                    placeholder="a.vance@standrewsacademy.org"
+                    className="w-full px-3 py-2 border border-stone-300 rounded"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-stone-200 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddFacultyOpen(false)}
+                  className="px-4 py-2 border border-stone-300 text-stone-700 hover:bg-stone-100 rounded"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-[#2271b1] hover:bg-[#135e96] text-white rounded font-bold cursor-pointer"
+                >
+                  Save Faculty Profile
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

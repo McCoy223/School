@@ -361,6 +361,39 @@ export default function App() {
         </div>
       )}
 
+      {/* WordPress Admin Quick Bar for Logged-In Administrator */}
+      {activePage !== 'admin' && (
+        <div className="bg-[#1d2327] text-[#c3c4c7] text-xs h-7 px-4 flex items-center justify-between z-50 select-none border-b border-[#2c3338]">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setActivePage('admin')}
+              className="flex items-center gap-1.5 text-white hover:text-[#72aee6] font-semibold cursor-pointer"
+            >
+              <div className="w-4 h-4 rounded-full bg-[#2271b1] text-white flex items-center justify-center font-serif font-black text-[9px] leading-none">
+                W
+              </div>
+              <span className="font-bold text-[11px] truncate max-w-[120px] sm:max-w-none">{siteSettings.schoolName}</span>
+            </button>
+            <span className="text-stone-600 hidden sm:inline">·</span>
+            <button
+              onClick={() => setActivePage('admin')}
+              className="text-[#72aee6] hover:text-white transition-colors cursor-pointer flex items-center gap-1 text-[11px]"
+            >
+              <span>✎ Edit Site with WordPress</span>
+            </button>
+          </div>
+          <div className="flex items-center gap-3 text-[11px]">
+            <span className="text-stone-400 hidden md:inline">Howdy, Administrator</span>
+            <button
+              onClick={() => setActivePage('admin')}
+              className="bg-[#2271b1] hover:bg-[#135e96] text-white px-2 py-0.5 rounded font-semibold text-[10px] cursor-pointer transition-colors"
+            >
+              WP Admin
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Primary Navigation - Strictly the 5 pages */}
       <Navbar
         activePage={activePage}

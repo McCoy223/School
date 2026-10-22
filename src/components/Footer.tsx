@@ -205,16 +205,23 @@ export const Footer: React.FC<FooterProps> = ({ settings, onSelectPage, onOpenAn
         </div>
 
         {/* Bottom strip */}
-        <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-stone-400">
-          <div>
-            © {new Date().getFullYear()} {schoolName}. All rights reserved. {accreditation}.
-          </div>
-          <div className="flex items-center gap-4">
-            <span>Terms of Service</span>
-            <span aria-hidden="true">·</span>
-            <span>Family Educational Rights & Privacy (FERPA)</span>
-            <span aria-hidden="true">·</span>
-            <span>Accredited Academic Institution</span>
+        <div className="pt-6 flex flex-col gap-3 text-[11px] text-stone-400">
+          {settings?.footerNotice && (
+            <p className="text-stone-400 text-[10px] leading-relaxed max-w-4xl">
+              {settings.footerNotice}
+            </p>
+          )}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2 border-t border-stone-800">
+            <div>
+              © {new Date().getFullYear()} {schoolName}. All rights reserved. {accreditation}.
+            </div>
+            <div className="flex items-center gap-4">
+              <span>Terms of Service</span>
+              <span aria-hidden="true">·</span>
+              <span>Family Educational Rights & Privacy (FERPA)</span>
+              <span aria-hidden="true">·</span>
+              <span>Accredited Academic Institution</span>
+            </div>
           </div>
         </div>
 
