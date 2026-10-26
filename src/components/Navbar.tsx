@@ -10,7 +10,7 @@ import {
   BookOpen
 } from 'lucide-react';
 import { AuthUserSession, AppPage } from '../types';
-import { LogOut, UserCheck } from 'lucide-react';
+import { LogOut, UserCheck, Monitor, Laptop } from 'lucide-react';
 
 interface NavbarProps {
   activePage: AppPage;
@@ -21,6 +21,7 @@ interface NavbarProps {
   schoolName?: string;
   currentUser?: AuthUserSession | null;
   onLogout?: () => void;
+  onOpenDesktopAppModal?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -31,7 +32,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   unreadAnnouncementsCount,
   schoolName = "St. Andrew's Academy",
   currentUser,
-  onLogout
+  onLogout,
+  onOpenDesktopAppModal
 }) => {
   const navItems: { id: AppPage; label: string; icon: React.FC<{ className?: string }> }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -46,20 +48,20 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between gap-6 h-18">
           
-          {/* Zone 1: Single text wordmark */}
+          {/* Zone 1: School Management System Wordmark */}
           <button
             onClick={() => onSelectPage('dashboard')}
             className="flex items-center gap-2.5 text-left group focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-800 rounded py-1 shrink-0 cursor-pointer"
           >
-            <div className="w-8 h-8 rounded bg-stone-900 text-amber-100 flex items-center justify-center font-serif font-bold text-sm shadow-sm group-hover:bg-stone-800 transition-colors">
-              SA
+            <div className="w-9 h-9 rounded-xl bg-stone-900 text-amber-300 flex items-center justify-center font-serif font-black text-sm shadow-md group-hover:bg-stone-800 transition-colors border border-amber-500/30">
+              SMS
             </div>
             <div className="flex flex-col">
               <span className="text-base sm:text-lg font-serif font-bold tracking-tight text-stone-950 whitespace-nowrap leading-none">
-                {schoolName}
-              </span>
-              <span className="text-[10px] uppercase font-mono tracking-widest text-stone-500 font-semibold mt-0.5">
                 School Management System
+              </span>
+              <span className="text-[10px] uppercase font-mono tracking-widest text-amber-800 font-semibold mt-0.5">
+                {schoolName} · Standalone Desktop
               </span>
             </div>
           </button>
@@ -111,6 +113,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-amber-600 rounded-full ring-2 ring-white" />
               )}
             </button>
+
+            {onOpenDesktopAppModal && (
+              <button
+                onClick={onOpenDesktopAppModal}
+                className="hidden md:flex px-2.5 py-1.5 text-xs font-semibold text-stone-700 hover:text-stone-950 bg-stone-100 hover:bg-stone-200 border border-stone-300 rounded-lg shadow-2xs transition-all whitespace-nowrap cursor-pointer items-center gap-1.5"
+                title="Install standalone computer app for Windows / Mac / Linux"
+              >
+                <Monitor className="w-3.5 h-3.5 text-stone-700" />
+                <span>Computer App</span>
+              </button>
+            )}
 
             <button
               onClick={() => onSelectPage('sms')}

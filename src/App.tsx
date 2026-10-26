@@ -14,8 +14,9 @@ import { Footer } from './components/Footer';
 import { SchoolAnnouncementsModal } from './components/SchoolAnnouncementsModal';
 import { GlobalSearchModal } from './components/GlobalSearchModal';
 import { LoginGate } from './components/LoginGate';
+import { DesktopAppModal } from './components/DesktopAppModal';
 import { auditLogger } from './services/auditLogger';
-import { ShieldCheck, WifiOff } from 'lucide-react';
+import { ShieldCheck, WifiOff, Monitor, Laptop } from 'lucide-react';
 
 import {
   INITIAL_FACULTY,
@@ -51,8 +52,18 @@ import {
 } from './types';
 
 export default function App() {
-  // Navigation: strictly 5 core pages as requested
-  const [activePage, setActivePage] = useState<AppPage>('dashboard');
+  // Navigation: strictly 5 core pages with URL route synchronization
+  const [activePage, setActivePage] = useState<AppPage>(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.toLowerCase();
+      if (hash.includes('sms')) return 'sms';
+      if (hash.includes('students')) return 'students';
+      if (hash.includes('teachers')) return 'teachers';
+      if (hash.includes('admin')) return 'admin';
+      if (hash.includes('school-management-system') || hash.includes('dashboard')) return 'dashboard';
+    }
+    return 'dashboard';
+  });
 
   // School Datasets & Operational State
   const [siteSettings, setSiteSettings] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
@@ -114,8 +125,36 @@ export default function App() {
   // Global Modals State
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isAnnouncementsOpen, setIsAnnouncementsOpen] = useState(false);
+  const [isDesktopModalOpen, setIsDesktopModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [unsyncedAuditCount, setUnsyncedAuditCount] = useState<number>(() => auditLogger.getUnsyncedCount());
+
+  // URL Hash synchronization with "school-management-system" routes
+  useEffect(() => {
+    const pageToHash: Record<AppPage, string> = {
+      dashboard: 'school-management-system',
+      sms: 'sms-console',
+      students: 'students-registry',
+      teachers: 'teachers-faculty',
+      admin: 'admin-portal'
+    };
+    const target = pageToHash[activePage] || 'school-management-system';
+    if (window.location.hash !== `#${target}`) {
+      window.location.hash = target;
+    }
+
+    const handleHash = () => {
+      const h = window.location.hash.toLowerCase();
+      if (h.includes('sms')) setActivePage('sms');
+      else if (h.includes('student')) setActivePage('students');
+      else if (h.includes('teacher')) setActivePage('teachers');
+      else if (h.includes('admin')) setActivePage('admin');
+      else if (h.includes('school-management-system') || h.includes('dashboard')) setActivePage('dashboard');
+    };
+
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, [activePage]);
 
   // Subscribe to audit logger events
   useEffect(() => {
@@ -550,6 +589,15 @@ export default function App() {
               <span>Audit Logs</span>
             </button>
             <span className="text-stone-600 hidden sm:inline">|</span>
+            <button
+              onClick={() => setIsDesktopModalOpen(true)}
+              className="hidden lg:flex items-center gap-1 text-stone-300 hover:text-white transition-colors cursor-pointer text-[11px]"
+              title="Install as standalone computer application"
+            >
+              <Monitor className="w-3.5 h-3.5 text-amber-400" />
+              <span>Computer App</span>
+            </button>
+            <span className="text-stone-600 hidden lg:inline">|</span>
             <div className="flex items-center gap-1.5">
               <span className="text-stone-300 hidden md:inline truncate max-w-[140px]">
                 {session.name}
@@ -582,6 +630,7 @@ export default function App() {
         }}
         onOpenSearch={() => setIsSearchOpen(true)}
         onOpenAnnouncements={() => setIsAnnouncementsOpen(true)}
+        onOpenDesktopAppModal={() => setIsDesktopModalOpen(true)}
         unreadAnnouncementsCount={announcements.filter(a => a.urgent).length}
         schoolName={siteSettings.schoolName}
         currentUser={session}
@@ -688,6 +737,12 @@ export default function App() {
         isOpen={isAnnouncementsOpen}
         onClose={() => setIsAnnouncementsOpen(false)}
         announcements={announcements}
+      />
+
+      {/* Standalone Computer Desktop Application Modal */}
+      <DesktopAppModal
+        isOpen={isDesktopModalOpen}
+        onClose={() => setIsDesktopModalOpen(false)}
       />
 
       {/* Global Search Directory Modal */}

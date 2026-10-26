@@ -1,0 +1,80 @@
+{
+  "id": "/school-management-system",
+  "name": "School Management System",
+  "short_name": "SchoolSMS",
+  "description": "Professional Standalone School Management System for desktop computers, laptops, and administrative workstations.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#0f172a",
+  "background_color": "#0f172a",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": [
+    "education",
+    "productivity",
+    "business"
+  ],
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Academic Registry",
+      "short_name": "Students",
+      "description": "View student roster, grades, and generate ID cards",
+      "url": "./#students",
+      "icons": [{ "src": "./pwa-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Teacher Result Uploads",
+      "short_name": "Results",
+      "description": "Upload and publish class exam and assessment batches",
+      "url": "./#teachers",
+      "icons": [{ "src": "./pwa-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "SMS Operations Console",
+      "short_name": "Operations",
+      "description": "Enrollment, timetables, and tuition fee invoices",
+      "url": "./#sms",
+      "icons": [{ "src": "./pwa-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "WordPress Admin & Audit",
+      "short_name": "Admin",
+      "description": "CMS site customizer and cryptographic audit logs",
+      "url": "./#admin",
+      "icons": [{ "src": "./pwa-192x192.png", "sizes": "192x192" }]
+    }
+  ]
+}

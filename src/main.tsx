@@ -3,6 +3,18 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import { ClerkRootProvider } from './components/ClerkIntegration';
+import { registerSW } from 'virtual:pwa-register';
+
+// Register service worker for standalone computer app & offline caching
+registerSW({
+  immediate: true,
+  onNeedRefresh() {
+    console.log('School Management System update available');
+  },
+  onOfflineReady() {
+    console.log('School Management System is ready to run offline as a standalone desktop app');
+  }
+});
 
 interface ErrorBoundaryProps {
   children: ReactNode;
